@@ -1,0 +1,156 @@
+---
+title: "Requirements Quality Impact on Missing Entities"
+author: "Julian Frattini"
+date: '2023-10-10'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+source("../util/setup.R")
+source("../util/model-eval.R")
+```
+
+This document contains the investigation of the impact of **requirements quality** on the number of **missing entities** in the process of domain modeling .
+
+## Data Loading
+
+```{r data}
+source("../util/data-preprocessing.R")
+d <- load.data()
+```
+
+## Bayesian Data Analysis 
+
+We perform a Bayesian data analysis to answer the question: which factors influence the number of missing entities from a domain model.
+
+### Graphical Causal Model
+
+We draw a Directed Acyclic Graph (DAG) to make our causal assumptions explicit.
+
+```{r dag}
+dag <- dagify(
+  me ~ rq + dur + edu + exp + dom + task + tool,
+  exposure = "rq",
+  outcome = "me",
+  labels = c(me = "missing.entities", dur = "duration",
+             rq = "requirements.quality",
+             edu = "education", exp="experience",
+             dom = "domain.knowledge", task = "task.experience",
+             tool = "tool.experience"),
+  coords = list(x=c(rq=1, me=2, dur=1.5, edu=1, exp=1, dom=1, task=1, tool=1),
+                y=c(rq=-1, me=-1.5, dur=0, edu=-2, exp=-2.5, dom=-3, task=-3.5, tool=-4))
+)
+
+ggdag_status(dag, 
+             use_labels = "label", 
+             text = FALSE) +
+  guides(fill = "none", color = "none") + 
+  theme_dag()
+```
+
+### Formula Definition and Prior Selection
+
+We derive our formula from our DAG to infer the strength of causal relationships from it.
+
+#### Model Definition
+
+```{r formula}
+formula <- entities.missing | trials(entities.expected) ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  rel.duration + 
+  exp.se.scaled + exp.re.scaled + edu + primary.role +
+  dom.os + dom.db + 
+  model.train + model.occ
+```
+
+TODO justify priors
+
+```{r priors}
+priors <- c(
+  prior(normal(-1, 0.5), class=Intercept),
+  prior(normal(0, 0.3), class=b),
+  prior(weibull(2, 1), class=sd)
+)
+```
+
+#### Prior Evaluation
+
+We sample directly from the priors (i.e., sample without the model updating its parameter distributions based on the observed data) to evaluate the feasibility of the priors.
+
+```{r model-sample-priors}
+m.prior <-
+  brm(data = d, family = binomial, formula, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, sample_prior="only",
+    file = "fits/missing.entities.prior"
+  )
+```
+
+With the samples from the prior distributions, we conduct a prior predictive check to ensure that the priors are appropriate, i.e., the actual observations are realistic given the prior knowledge of the model.
+
+```{r prior-predictive-check}
+ndraws <- 100
+priorpc <- brms::pp_check(type="bars", m.prior, ndraws=ndraws)
+priorpc
+```
+
+The distribution of draws encompasses the actually observed data, meaning that the actual observations lie within the realm of belief defined by the priors. We accept our priors as feasible.
+
+### Model Training
+
+Now, we execute the estimation step by updating the prior distributions based on the observed data `d`.
+
+```{r model}
+m <-
+  brm(data = d, family = binomial, formula, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, 
+    file = "fits/missing.entities"
+  )
+```
+
+We perform a posterior predictive check to ensure that the model has learned properly.
+
+```{r posterior-predictive-check}
+brms::pp_check(m, type="bars", ndraws=ndraws)
+```
+
+The distribution of draws still encompasses the actually obsered data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data.
+
+Because we only trained one model, there is no need to select the best performing model using leave-one-out comparison `loo_compare`.
+
+We visualize the summary of updated posterior distributions - which does not yet answer the initial question, but indicates the direction and strength that each predictor has on the response variable.
+
+```{r model-summary}
+summary(m)
+```
+
+### Model Evaluation
+
+#### Posterior Predictions
+
+We let the model predict the response variable with a fixed independent variable (RQ=1 (passive voice), RQ=2 (ambiguous pronoun), and RQ=3 (passive voice + ambiguous pronoun)) and representative values for the context factors. This posterior prediction takes all uncertainty, which the model picked up, into account.
+
+```{r posterior-comparison-passive}
+evaluate.model(model=m, treatment=1)
+```
+
+```{r posterior-comparison-pronoun}
+evaluate.model(model=m, treatment=2)
+```
+
+```{r posterior-comparison-passive-pronoun}
+evaluate.model(model=m, treatment=3)
+```
+
+#### Marginal Effect
+
+```{r marginal-effects}
+marginaleffects::plot_predictions(m2, 
+  condition = "model.occ", 
+  type="link", transform=inv_logit_scaled
+)
+```

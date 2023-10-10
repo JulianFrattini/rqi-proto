@@ -1,0 +1,182 @@
+---
+title: "Requirements Quality Impact on Superfluous Entities"
+author: "Julian Frattini"
+date: '2023-04-13'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+source("../util/setup.R")
+source("../util/model-eval.R")
+```
+
+This document contains the investigation of the impact of **requirements quality** on the number of **superfluous entities** in the process of domain modeling. An entity is superfluous if it is not implied by the requirements specification and, hence, only restricts the solution space.
+
+## Data Loading
+
+```{r data}
+source("../util/data-preprocessing.R")
+d <- load.data()
+```
+
+## Bayesian Data Analysis 
+
+We perform a Bayesian data analysis to answer the question: which factors influence the number of wrong associations in a domain model.
+
+### Formula Definition and Prior Selection
+
+We derive our formula from our DAG to infer the strength of causal relationships from it.
+
+#### Primary Model
+
+```{r formula}
+formula <- entities.superfluous ~ 1 + 
+  (1|PID) + 
+  RQ +
+  dom.db + dom.os +
+  RQ*period +
+  rel.duration + 
+  exp.se.scaled + exp.re.scaled + edu + primary.role + 
+  model.train + model.occ
+
+#get_prior(formula, data=d, family=zero_inflated_poisson)
+```
+
+```{r priors}
+priors <- c(
+  prior(normal(0, 1), class=Intercept),
+  prior(normal(0, 1), class=b),
+  prior(weibull(2, 1), class=sd)
+)
+```
+
+#### Prior Predictive Checks
+
+```{r model-priors}
+m.prior <-
+  brm(data = d, family = zero_inflated_poisson, formula, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, sample_prior="only",
+    #file = "fits/superfluous.entities.prior"
+  )
+```
+
+```{r prior-predictive-check}
+ndraws <- 100
+priorpc <- brms::pp_check(m.prior, ndraws=ndraws, type="bars")
+priorpc
+```
+
+### Model Training
+
+Now, we execute the estimation step by updating the prior distributions based on the observed data `d`.
+
+```{r model}
+m <-
+  brm(data = d, family = zero_inflated_poisson, formula, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, 
+    file = "fits/superfluous.entities"
+  )
+```
+
+We perform a posterior predictive check to ensure that the model has learned properly.
+
+```{r posterior-predictive-check}
+postpc <- brms::pp_check(m, ndraws=ndraws, type="bars")
+postpc
+```
+
+The distribution of draws still encompasses the actually obsered data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data.
+
+Because we only trained one model, there is no need to select the best performing model using leave-one-out comparison `loo_compare`.
+
+We visualize the summary of updated posterior distributions - which does not yet answer the initial question, but indicates the direction and strength that each predictor has on the response variable.
+
+```{r model-summary}
+summary(m)
+```
+
+### Model Evaluation
+
+#### Posterior Predictions
+
+We let the model predict the response variable with a fixed independent variable (RQ=1 (passive voice), RQ=2 (ambiguous pronoun), and RQ=3 (passive voice + ambiguous pronoun)) and representative values for the context factors. This posterior prediction takes all uncertainty, which the model picked up, into account.
+
+```{r posterior-comparison-passive}
+evaluate.model(model=m, treatment=1)
+```
+
+```{r posterior-comparison-pronoun}
+evaluate.model(model=m, treatment=2)
+```
+
+```{r posterior-comparison-passive-pronoun}
+evaluate.model(model=m, treatment=3)
+```
+
+#### Marginal Effect
+
+```{r marginal-effects-modeling}
+marginal.effect.modeling.mo <- marginaleffects::plot_predictions(
+  m,
+  condition = "model.occ",
+  type = "response"
+)
+
+marginal.effect.modeling.cat <- marginaleffects::plot_predictions(
+  m2,
+  condition = "model.occ",
+  type = "response"
+)
+
+marginal.effect.modeling.mo | marginal.effect.modeling.cat
+```
+```{r marginal-effects-modeling-viz}
+m1 <- marginal.effect.modeling.mo +
+  labs(y="Number of Superfluous Entities", x="Task experience in Monotonic Model") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
+m2 <- marginal.effect.modeling.cat +
+  labs(y="Number of Superfluous Entities", x="Task experience in Categorical Model") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+m1+m2
+ggsave(filename= "figs/rqi-task-exp.pdf", width=6.5, height=3)
+```
+
+
+```{r marginal-effects-exp}
+marginal.effect.exp.se <- marginaleffects::plot_predictions(
+  m, condition = "exp.se.scaled",
+  type = "response"
+)
+
+marginal.effect.exp.re <- marginaleffects::plot_predictions(
+  m, condition = "exp.re.scaled",
+  type = "response"
+)
+
+marginal.effect.exp.se | marginal.effect.exp.re
+```
+
+```{r}
+m3 <- marginal.effect.exp.se +
+  labs(y="Number of Superfluous Entities", x="Experience in SE") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
+m4 <- marginal.effect.exp.re +
+  labs(y="Number of Superfluous Entities", x="Experience in RE") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+m3+m4
+ggsave(filename= "figs/rqi-exp-impact.pdf", width=6.5, height=3)
+```
+
+
+```{r marginal-effects}
+marginaleffects::plot_predictions(m,
+  condition = "primary.role",
+  type = "response"
+)
+```
