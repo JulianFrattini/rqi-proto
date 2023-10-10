@@ -1,0 +1,224 @@
+---
+title: "Requirements Quality Impact on Wrong Associations"
+author: "Julian Frattini"
+date: '2023-09-28'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+source("../util/setup.R")
+source("../util/model-eval.R")
+```
+
+This document contains the investigation of the impact of **requirements quality** on the number of **wrong associations** in the process of domain modeling. A wrong association is an association where one of the connected nodes should actually not be involved while a third, not connected node, should be.
+
+## Data Loading
+
+```{r data}
+source("../util/data-preprocessing.R")
+d <- load.data()
+```
+
+## Bayesian Data Analysis 
+
+We perform a Bayesian data analysis to answer the question: which factors influence the number of wrong associations in a domain model.
+
+### Graphical Causal Model
+
+We draw a Directed Acyclic Graph (DAG) to make our causal assumptions explicit.
+
+```{r dag}
+dag <- dagify(
+  wrong ~ rq + dur + edu + exp + dom + task + tool,
+  exposure = "rq",
+  outcome = "wrong",
+  labels = c(wrong = "wrong.associations", dur = "duration",
+             rq= "requirements.quality", 
+             edu = "education", exp="experience",
+             dom = "domain.knowledge", task = "task.experience",
+             tool = "tool.experience"),
+  coords = list(x=c(rq=1, wrong=2, dur=1.5, edu=1, exp=1, dom=1, task=1, tool=1),
+                y=c(rq=-1, wrong=-1.5, dur=0, edu=-2, exp=-2.5, dom=-3, task=-3.5, tool=-4))
+)
+
+ggdag_status(dag, 
+             use_labels = "label", 
+             text = FALSE) +
+  guides(fill = "none", color = "none") + 
+  theme_dag()
+```
+
+### Formula Definition and Prior Selection
+
+We derive our formula from our DAG to infer the strength of causal relationships from it.
+
+#### Model Definition
+
+TODO: Predictors in the formula:
+
+| Term | Predictor | Rationale |
+|---|---|---|
+| `1` | Intercept | General challenge of connecting entities wrongly |
+| `(1|PID)` | Participant-specific variability | General ability of an individual participant with id `PID` to connect entities wrongly |
+| `RQ` | Main factor | Influence of a requirements quality defect on connecting entities wrongly |
+| `period` | Sequence effect | Period in which the subject applies the treatment |
+| `rel.duration` | Time | 
+
+```{r formula}
+formula <- associations.wrong | trials(associations.expected) ~ 1 + 
+  (1|PID) + 
+  RQ*dom.os +
+  RQ*period +
+  rel.duration + 
+  exp.se.scaled + exp.re.scaled + edu + primary.role + 
+  model.train + model.occ
+                    
+get_prior(formula, data=d, family=binomial)
+```
+
+For each predictor, we select an appropriate prior that reflects our prior belief about the causal relationship. We use weakly informative priors to allow the model in the later estimation step to infer the strength of the causal relations itself. The only exceptions are:
+
+* Prior for the intercept: previous research shows that producing domain modeling is in general a not too complex task for engineers. Hence, we select a mean $\mu_{\alpha} < logit(0.5) = 0$ to represent that it is less likely than random to connect associations wrong.
+* Prior for the treatment: the treatment of the prior is expected to have a greater influence than the less definitive context variables, hence $\sigma_{RQ} > \sigma$.
+
+```{r priors}
+priors <- c(
+  prior(normal(-2.5, 1), class=Intercept),
+  prior(normal(0, 1), class=b, coef="RQ1"),
+  prior(normal(0, 1), class=b, coef="RQ2"),
+  prior(normal(0, 1), class=b, coef="RQ3"),
+  prior(normal(0, 0.5), class=b),
+  prior(weibull(2, 1), class=sd)
+)
+```
+
+#### Prior Evaluation
+
+We sample directly from the priors (i.e., sample without the model updating its parameter distributions based on the observed data) to evaluate the feasibility of the priors.
+
+```{r model-sample-priors}
+m.prior <-
+  brm(data = d, family = binomial, formula, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, sample_prior="only",
+    file = "fits/wrong.associations.prior"
+  )
+```
+
+With the samples from the prior distributions, we conduct a prior predictive check to ensure that the priors are appropriate, i.e., the actual observations are realistic given the prior knowledge of the model.
+
+```{r prior-predictive-check}
+ndraws <- 100
+brms::pp_check(m.prior, ndraws=ndraws, type="bars")
+```
+
+The distribution of draws encompasses the actually observed data, meaning that the actual observations lie within the realm of belief defined by the priors. We accept our priors as feasible.
+
+### Model Training
+
+Now, we execute the estimation step by updating the prior distributions based on the observed data `d`.
+
+```{r model}
+m <-
+  brm(data = d, family = binomial, formula, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, 
+    file = "fits/wrong.associations"
+  )
+```
+
+We perform a posterior predictive check to ensure that the model has learned properly.
+
+```{r posterior-predictive-check}
+brms::pp_check(m, type="bars", ndraws=ndraws)
+```
+
+The distribution of draws still encompasses the actually obsered data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data.
+
+Because we only trained one model, there is no need to select the best performing model using leave-one-out comparison `loo_compare`.
+
+We visualize the summary of updated posterior distributions - which does not yet answer the initial question, but indicates the direction and strength that each predictor has on the response variable.
+
+```{r model-summary}
+summary(m)
+```
+
+These distributions can also be visualized graphically in addition to the Markov chains, which also provides diagnostics for the successful execution of the estimation step.
+
+```{r model-diagnostics}
+plot(m)
+```
+
+### Model Evaluation
+
+#### Posterior Predictions
+
+We let the model predict the response variable with a fixed independent variable (RQ=1 (passive voice), RQ=2 (ambiguous pronoun), and RQ=3 (passive voice + ambiguous pronoun)) and representative values for the context factors. This posterior prediction takes all uncertainty, which the model picked up, into account.
+
+```{r posterior-comparison-passive}
+evaluate.model(model=m, treatment=1)
+```
+
+```{r posterior-comparison-pronoun}
+evaluate.model(model=m, treatment=2)
+```
+
+```{r posterior-comparison-passive-pronoun}
+evaluate.model(model=m, treatment=3)
+```
+
+#### Marginal and Interaction Effects
+
+Additionally, we look at some marginal and interaction effects. Marginal effects represent the isolated effect of one variable on the outcome while all other effects are fixed at at a representative value. Interaction effects visualize the interaction between two predictors.
+
+Firstly, we investigate the effect of the relative duration to see whether the time taken to create a domain model has an effect on the response variable.
+
+```{r marginal-duration}
+conditional_effects(m, effects="rel.duration")
+```
+
+Time-pressure negatively affects the number of wrong associations. The less time a subject took for a domain model, the higher the likelihood of connecting associations wrongly.
+
+Next, we investigate the interaction between domain knowledge and the treatment. The hypothesis is that domain knowledge (in this case: particularly domain knowledge about open science/source) mitigates the effect of the treatments.
+
+```{r interaction-treatment-domainknowledge}
+conditional_effects(m, effects="dom.os:RQ")
+```
+
+The interaction effect shows a negative trend for `RQ=2` and `RQ=3`, meaning that the higher the domain knowledge, the smaller the impact of an ambiguous pronoun on the number of wrong associations. However, for `RQ=3`, the relationship is rather a bell-curve, meaning that 
+
+Next, we visualize the interaction effect between the period variable (i.e., the time slot in which a specific requirements specification was processed) and the treatment to identify any potential carryover effects.
+
+```{r interaction-treatment-period}
+conditional_effects(m, effects=c("period", "period:RQ"))
+```
+
+The period has barely an effect on the response variable, such that a learning effect can be excluded. The interaction, however, shows that the effect of ambiguous pronouns was amplified in later periods.
+
+#### Within-Subject Variance
+
+Finally, we visualize the within-subject variance, i.e., the impact on the response variable that is caused by the particularities of the experiment participant itself. It can be assumed that this variance covers all context factors not explicitly included in the data.
+
+```{r subject-variance}
+r_fit <- m %>% 
+  tidy() %>% 
+  mutate(term = janitor::make_clean_names(term)) %>% 
+  split(~term)
+
+intercept <- r_fit$intercept$estimate
+
+m %>% 
+  linpred_draws(
+    datagrid(
+      PID = unique(d$PID), 
+      RQ = unique(d$RQ), 
+      model = m)) %>% 
+  mutate(offset = intercept - .linpred) %>% 
+  ungroup() %>% 
+  mutate(PID = fct_reorder(factor(PID), offset, .fun=mean)) %>% 
+  ggplot(aes(x = offset, y = PID)) +
+    geom_vline(xintercept = 0) + 
+    stat_pointinterval()
+```
