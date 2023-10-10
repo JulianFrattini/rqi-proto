@@ -1,0 +1,428 @@
+---
+title: "RQI Data Loading"
+author: "Julian Frattini"
+date: '2023-10-10'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r paths}
+path_data <- "../../data"
+path_figures <- "../../figures/demographics"
+```
+
+## Data Loading
+
+```{r libraries, include=FALSE, message=FALSE}
+library(tidyverse)
+library(xlsx)
+library(stringr)
+```
+
+In this document, we load and wrangle the data collected during the "Requirements Quality Impact" experiment. During the experiment, study participants of different backgrounds transformed four natural language requirements specifications (containing different, seeded quality defects) into domain models. The purpose of this experiment is to investigate whether there is a causal relationship between quality defects in requirements specifications and the amount of mistakes in resulting domain models.
+
+The data consists of three tables:
+
+1. The requirements table: Data about the study objects, i.e., the four requirements specifications with the seeded quality defects.
+2. The observations table: Data about the experimental results, i.e., the number of issues in the domain models that each study participant produced.
+3. The demographic table: Data containing demographic information about the experiment participants (e.g., their experience, education, etc.).
+
+### Requirements
+
+The requirements data consists of a list of four requirements, each identified by its identifier `RID` and characterized by the treatment (the use of `PassiveVoice` and/or an `AmbiguousPronoun`).
+
+```{r requirements}
+requirements <- read.csv(file=file.path(path_data, "rqi-objects.csv")) %>% 
+  mutate(
+    PassiveVoice = (PassiveVoice==1),
+    AmbiguousPronoun = (AmbiguousPronoun==1),
+    RQ = factor(PassiveVoice + 2*AmbiguousPronoun, levels=0:3)
+  )
+```
+
+### Observations
+
+Observations collected during the experiment. Every row represents the result of one participant processing one requirement, hence we expect $N \times 4$ observations
+
+```{r observations}
+observations <- read.xlsx(file=file.path(path_data, "rqi-results.xlsx"), sheetName="Statistics") %>% 
+  mutate(
+    PID = as.numeric(PID),
+    Duration = as.numeric(Duration)
+  )
+
+# drop N/A rows
+observations <- observations[complete.cases(observations),]
+```
+
+Remove all observations of participants that have to be excluded. In our case, this is only the case for $PID=0001$: This participant did not complete the full experiment. It is unclear whether he performed the task consciously.
+
+```{r exclusions}
+pid_exclusion <- c(1)
+
+observations <- observations %>% 
+  filter(!(PID %in% pid_exclusion))
+```
+
+Add the `period` variable to each observation that represents, during which time slot within an experimental session the treatment was applied. Because the observations are already in the correct order of the periods, this is a matter of repeating the index 1-4 throughout all rows.
+
+```{r period}
+observations <- observations %>% 
+  mutate(period = factor(rep(1:4, length(unique(observations$PID))), levels=1:4, ordered = TRUE))
+```
+
+To get a glance at the distribution of the duration, visualize the duration per requirement.
+
+```{r vis-duration}
+observations %>% 
+  select(RID, Duration) %>% 
+  ggplot() +
+    geom_boxplot(mapping=aes(as.factor(RID), Duration)) +
+    xlab("Requirement") +
+    coord_flip()
+```
+
+In comparison, visualize the duration per experimental period, which shows a slight speed-up from period 1 to period 4.
+
+```{r vis-duration-2}
+observations %>% 
+  select(period, Duration) %>% 
+  ggplot() +
+    geom_boxplot(mapping=aes(period, Duration)) +
+    xlab("Period in the experiment") +
+    coord_flip()
+```
+
+Currently, the box plots show the median instead of the mean.
+
+### Participants
+
+Demographic information about the participants
+
+#### Helper functions
+
+These functions help sanitize the input to free text answers.
+
+```{r duration-sanitizer}
+sanitize_duration <- function(dur) {
+  if(is.na(dur)) {
+    return(0)
+  } else if(str_detect(dur, "year")) {
+    years_string <- str_extract(dur, "(\\d+)(\\s*)year")
+    years <- str_squish(str_sub(years_string, 1, nchar(years_string)-4))
+    years_int <- as.integer(years)
+    
+    if(str_detect(dur, "month")) {
+      month_string <- str_extract(dur, "(\\d+)(\\s*)month")
+      months <- str_squish(str_sub(month_string, 1, nchar(month_string)-5))
+      if(months >=6) {
+        years_int <- years_int+1
+      }
+    }
+    
+    return(years_int)
+  } else {
+    dur_int <- as.numeric(dur)
+    if(is.na(dur_int))
+      return(0)
+    return(dur_int)
+  }
+}
+
+sanvec <- function(vec) {
+  return(as.numeric(sapply(vec, FUN=sanitize_duration)))
+}
+```
+
+```{r yesno-sanitizer}
+yesno <- function(answer) {
+  if(is.na(answer)) {
+    return(FALSE)
+  }
+  return(!str_squish(tolower(answer)) == "no")
+}
+
+sanyn <- function(vec) {
+  output <- sapply(vec, FUN=yesno)
+  names(output) <- NULL
+  return(output)
+}
+```
+
+#### Participant data
+
+Finally, load the demographic data and sanitize it.
+
+```{r participants}
+degrees <- c("High-School", "Bachelor's degree", "Master's degree", "Ph.D.")
+domain.knowledge <- 1:5
+occurrence <- c("None", "Rarely", "From time to time", "Often")
+
+demographics <- read.csv(file=file.path(path_data, "rqi-demographics.csv"))
+
+participants <- demographics %>% 
+  mutate(
+    PID = Code,
+    edu = factor(Level.of.Education, levels=degrees, ordered=TRUE),
+    
+    exp.SE = sanvec(Experience.in.Software.Engineering),
+    exp.RE = sanvec(Experience.in.Requirements.Engineering),
+    
+    role.RE = sanvec(Requirements.Engineer.Business.Analyst),
+    role.PO = sanvec(Product.Owner),
+    role.Arch = sanvec(System.Software.Architect),
+    role.Dev = sanvec(Developer),
+    role.Test = sanvec(Tester),
+    role.QA = sanvec(Quality.Engineer.Manager),
+    role.Edu = sanvec(Trainer.Educator),
+    role.MGT = sanvec(Manager),
+    
+    dom.tele = factor(Domain.knowledge..Telemetry.Systems., levels=domain.knowledge, ordered=TRUE),
+    dom.aero = factor(Domain.knowledge..Aeronautics., levels=domain.knowledge, ordered=TRUE),
+    dom.db = factor(Domain.knowledge..Databases., levels=domain.knowledge, ordered=TRUE),
+    dom.os = factor(Domain.knowledge..Open.Source., levels=domain.knowledge, ordered=TRUE),
+    
+    model.occ = factor(sapply(strsplit(Experience.with.modeling, "\\s\\("), `[`, 1), levels=occurrence, ordered=TRUE),
+    model.train = sanyn(Formal.training.in.modeling),
+    
+    tool = factor(sapply(strsplit(Experience.with.the.tool, "\\s\\("), `[`, 1), levels=occurrence, ordered=TRUE),
+  ) %>% 
+  filter(!(PID %in% pid_exclusion)) %>% 
+  select(PID, edu, exp.SE, exp.RE, role.RE, role.PO, role.Arch, role.Dev, role.Test, role.QA, role.Edu, role.MGT, dom.tele, dom.aero, dom.db, dom.os, model.occ, model.train, tool)
+```
+
+In addition to the role experience, determine the role with the most experience.
+
+```{r primary-role}
+# select only the role experiences
+roles <- participants %>% 
+  select(role.RE, role.PO, role.Arch, role.Dev, role.Test, role.QA, role.Edu, role.MGT)
+
+# determine whether a participant has no experience at all
+roles <- roles %>%
+  mutate(
+    role.none = if_else(apply(roles,1,sum) == 0, 1, 0)
+    )
+
+# add the primary role to each participant
+participants <- participants %>% 
+  mutate(
+    primary.role = colnames(roles)[apply(roles,1,which.max)]
+  )
+```
+
+To ease the selection of priors, scale the continuous experience variables to a range between 0 an 1.
+
+```{r scale-experience}
+participants <- participants %>% 
+  mutate(
+    exp.se.scaled = exp.SE/max(exp.SE),
+    exp.re.scaled = exp.RE/max(exp.RE)
+  )
+```
+
+
+#### Demographics Visualization
+
+Since we employ a purposive and convenience sampling method, we visualize the distribution of demographic factors to check whether our sample is representative of the target population of interest.
+
+```{r vis-education}
+ggplot(data=participants, mapping=aes(x=edu)) +
+  geom_histogram(stat="count")
+```
+
+```{r experience-correlation}
+participants %>% 
+  ggplot(aes(exp.se.scaled, exp.re.scaled)) +
+    geom_point()
+```
+
+```{r vis-experience}
+participants %>% 
+  pivot_longer(
+    cols = c(exp.SE, exp.RE),
+    names_to = "domain",
+    values_to = "value"
+    ) %>% 
+  select(domain, value) %>% 
+  ggplot(mapping=aes(x=domain, y=value)) +
+    geom_boxplot() +
+    coord_flip() +
+    labs(x="", y="years") +
+    scale_x_discrete(labels=c("RE", "SE")) +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+ggsave(filename=file.path(path_figures, "rqi-experience.pdf"), width=5, height=1)
+```
+
+```{r vis-roles}
+participants %>% 
+  pivot_longer(
+    cols = c(role.RE, role.PO, role.Arch, role.Dev, role.Test, role.QA, role.Edu, role.MGT),
+    names_to = "role",
+    values_to = "value"
+    ) %>% 
+  select(role, value) %>% 
+  ggplot(mapping=aes(x=role, y=value)) +
+    #geom_point(position=position_jitter(w=0.05, h=0)) + 
+    geom_boxplot() +
+    coord_flip()
+```
+
+```{r vis-primary-role}
+participants %>% 
+  ggplot(aes(x=primary.role)) +
+    geom_histogram(stat="count")
+```
+
+
+```{r vis-domain-knowledge}
+participants %>% 
+  pivot_longer(
+    cols = c(dom.tele, dom.aero, dom.db, dom.os),
+    names_to = "domain",
+    values_to = "value"
+    ) %>% 
+  select(domain, value) %>% 
+  group_by(domain, value) %>% 
+  summarize(n=n()) %>% 
+  ggplot(mapping=aes(x=reorder(domain, n), y=n, fill=forcats::fct_rev(value))) +
+    geom_bar(position = "stack", stat = "identity") +
+    coord_flip() +
+    labs(x="Domains", y="Count", fill="Knowledge") +
+    scale_x_discrete(labels=c("open source", "databases", "telemetry", "aeronautics")) +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+ggsave(filename=file.path(path_figures, "rqi-domainknowledge.pdf"), width=5, height=2)
+```
+
+```{r vis-model-tool}
+participants %>% 
+  pivot_longer(
+    cols = c(model.occ, tool),
+    names_to = "interaction",
+    values_to = "value"
+    ) %>% 
+  select(interaction, value) %>% 
+  group_by(interaction, value) %>% 
+  summarize(n=n()) %>% 
+  ggplot(mapping=aes(x=reorder(interaction, n), y=n, fill=forcats::fct_rev(value))) +
+    geom_bar(position = "stack", stat = "identity") +
+    coord_flip() +
+    labs(x="", y="Count", fill="Usage") +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+ggsave(filename=file.path(path_figures, "rqi-task.pdf"), width=5, height=2)
+```
+
+
+```{r vis-model-training}
+ggplot(data=participants, mapping=aes(x=model.train)) +
+  geom_histogram(stat="count")
+```
+
+## Data Assembly
+
+With all three data sources loaded, join them to allow further processing.
+
+```{r data-set}
+d <- observations %>% 
+  full_join(requirements) %>% 
+  full_join(participants)
+```
+
+## Data Manipulation
+
+### Renaming
+
+Some variables still have cumbersome names or require combinations (e.g., `associations.found = ExpectedAssociations - Missing.association`).
+
+```{r renaming}
+d <- d %>% 
+  mutate(
+    # scale the Duration variable 
+    duration.scaled = scale(Duration, center=TRUE)[,],
+    
+    # rename the response variables
+    entities.found = ExpectedEntities - Missing.entity,
+    entities.missing = Missing.entity,
+    entities.expected = ExpectedEntities,
+    entities.superfluous = Superfluous.entity,
+    associations.expected = ExpectedAssociations,
+    associations.found = ExpectedAssociations - Missing.association,
+    associations.missing = Missing.association + Miswired.association,
+    associations.superfluous = Superfluous.association,
+    associations.wrong = Miswired.association
+  )
+```
+
+### Relative dependent variables
+
+The experiment employs a crossover design, i.e., all four treatments (baseline + 3 quality defect combinations) are applied to every subject. This allows to factor out between-subject variability by making all dependent variables *relative to each subject's mean* instead of relative to the overall mean.
+
+First, determine the mean of the relevant dependent variables.
+
+```{r calculate-averages}
+averages <- d %>% 
+  group_by(PID) %>% 
+  summarize(
+    avg.duration = mean(Duration),
+    avg.entity.missing = mean(entities.missing),
+    avg.entity.super = mean(entities.superfluous),
+    avg.association.missing = mean(associations.missing),
+    avg.association.wrong = mean(associations.wrong)
+    )
+```
+
+Then, add this information to each row (i.e., that every observation is also associated with the mean observation *of its subject*) and calculate the relative values by subtracting the mean.
+
+```{r relative-scale}
+d <- d %>% 
+  full_join(averages)
+
+d <- d %>% mutate(
+  rel.duration = Duration - avg.duration,
+  rel.entity.miss = entities.missing - avg.entity.missing,
+  rel.entity.super = entities.superfluous - avg.entity.super,
+  rel.association.miss = associations.missing - avg.association.missing,
+  rel.association.wrong = associations.wrong - avg.association.wrong
+)
+```
+
+
+### Filtering
+
+Filter the data frame to only contain relevant columns.
+
+```{r filtering}
+d.rel <- d %>% 
+  select(
+    PID, RID, 
+    RQ, PassiveVoice, AmbiguousPronoun, 
+    period,
+    
+    edu, 
+    exp.se.scaled, exp.re.scaled, 
+    primary.role, 
+    dom.os, dom.db, 
+    model.occ, model.train, tool, 
+    
+    entities.expected, entities.found, entities.missing, entities.superfluous, 
+    associations.expected, associations.found, associations.missing, associations.superfluous, associations.wrong,
+    duration.scaled,
+    
+    rel.duration, rel.entity.miss, rel.entity.super, rel.association.miss, rel.association.wrong)
+
+str(d.rel)
+```
+
+## Data Export
+
+Store the data to make it reusable in the analyses.
+
+```{r export}
+write_csv(d.rel, file=file.path(path_data, "rqi-data.csv"))
+```
