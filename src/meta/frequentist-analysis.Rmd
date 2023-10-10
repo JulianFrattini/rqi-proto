@@ -1,0 +1,115 @@
+---
+title: "Frequentist Analysis of Requirements Quality Impact"
+author: "Julian Frattini"
+date: '2023-04-29'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+
+# data wrangling and manipulation
+library(tidyverse)
+source("../util/data-preprocessing.R")
+
+# frequentist statistics
+library(rcompanion)
+library(psych)
+```
+
+In this document, we analyze requirements quality impact with a frequentist approach. We test the 15 hypotheses derived from the following pattern:
+
+> There is no difference between domain models based on requirements specifications containing \{passive voice, ambiguous pronouns, passive voice and ambiguous pronouns\} and domain models based on requirements specifications without this defect in terms of \{modeling task duration, number of missing entities, number of superfluous entities, number of missing associations, number of miswired associations\}. 
+
+## Data Loading
+
+First, load the data and ensure that all variables are properly set up.
+
+```{r data}
+d <- load.data()
+```
+
+## Analysis
+
+We set the confidence level $\alpha'=\frac{0.05}{5}=0.01$ by applying the Bonferroni correction to the standard confidence level $\alpha=0.05$ to account for family-wise errors.
+
+```{r configuration}
+alpha <- 0.01
+
+treatments <- 1:3
+response.variables <- c("duration.scaled", "entities.missing", "entities.superfluous", "associations.missing", "associations.wrong")
+```
+
+The results will be stored in a data frame of the following structure:
+
+```{r dataframe}
+fda <- data.frame(
+  outcome = character(),
+  treatment = factor(),
+  normal = logical(),
+  p = double(),
+  reject = logical(),
+  ci.lower = double(),
+  ci.upper = double(),
+  effect.size = double(),
+  effect.size.ci.lower = double(),
+  effect.size.ci.upper = double()
+)
+```
+
+Next, we conduct the $3 \times 5 = 15$ hypotheses tests and store the results. We have paired data for analyzing both hypotheses, because every participant processed two requirements with different configurations of the independent variable for both configurations of the other independent variable. We determine, whether the data is normally distributed via the *Shapiro-Wilk test* and then select either the *paired student t-test* or the *Wilcoxon rank sum test* to evaluate the null-hypothesis.
+
+Additionally, we calculate the effect size with either *Cohen's d* or the *matched-pairs rank biserial correlation coefficient* according to King, B. M., Rosopa, P. J., & Minium, E. W. (2018). Statistical reasoning in the behavioral sciences. John Wiley & Sons. (see rcompanion documentation^[https://rcompanion.org/handbook/F_06.html])
+
+```{r analysis, Warning=FALSE}
+for (outcome in response.variables) {
+  for (treatment in treatments) {
+    d.paired <- assemble.paired(data=d, treatment=treatment, outcome=outcome)
+    d.long <- d %>% select(PID, RQ, outcome) %>% filter(RQ %in% c(0, treatment)) %>% mutate(treatment = !(RQ==0))
+      
+    swtest.baseline <- shapiro.test(d.paired$baseline)
+    swtest.treatment <- shapiro.test(d.paired$treatment)
+
+    if(swtest.baseline$p.value < alpha || swtest.treatment$p.value < alpha) {
+      hypothesis.test <- wilcox.test(x=d.paired$baseline, y=d.paired$treatment, conf.int=TRUE, paired=TRUE)
+      effect.size <- wilcoxonPairedRC(x=d.long[[outcome]], g=d.long$treatment, ci=TRUE)
+
+      result <- list(
+        outcome = outcome,
+        factor = treatment,
+        normal = FALSE,
+        p = hypothesis.test$p.value,
+        reject = hypothesis.test$p.value < alpha,
+        ci.lower = hypothesis.test$conf.int[1],
+        ci.upper = hypothesis.test$conf.int[2],
+        effect.size = effect.size$rc,
+        effect.size.ci.lower = effect.size$lower.ci,
+        effect.size.ci.upper = effect.size$upper.ci)
+    } else {
+      hypothesis.test <- t.test(x=d.paired$baseline, y=d.paired$treatment, paired=TRUE)
+      effect.size <- cohen.d(x=d.long[[outcome]], group=d.long$treatment)
+
+      result <- list(
+        outcome = outcome,
+        factor = treatment,
+        normal = TRUE,
+        p = hypothesis.test$p.value,
+        reject = hypothesis.test$p.value < alpha,
+        ci.lower = hypothesis.test$conf.int[1],
+        ci.upper = hypothesis.test$conf.int[2],
+        effect.size = effect.size$cohen.d[2],
+        effect.size.ci.lower = effect.size$cohen.d[1],
+        effect.size.ci.upper = effect.size$cohen.d[3])
+    }
+
+    fda <- rbind(fda, result)
+  }
+}
+```
+
+Finally, we visualize the results.
+
+```{r result}
+knitr::kable(fda, "simple")
+```
+
