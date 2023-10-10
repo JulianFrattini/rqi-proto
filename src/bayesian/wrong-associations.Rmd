@@ -56,15 +56,21 @@ We derive our formula from our DAG to infer the strength of causal relationships
 
 #### Model Definition
 
-TODO: Predictors in the formula:
+Based on the DAG, we construct a model with the following parameters:
 
 | Term | Predictor | Rationale |
 |---|---|---|
 | `1` | Intercept | General challenge of connecting entities wrongly |
 | `(1|PID)` | Participant-specific variability | General ability of an individual participant with id `PID` to connect entities wrongly |
-| `RQ` | Main factor | Influence of a requirements quality defect on connecting entities wrongly |
-| `period` | Sequence effect | Period in which the subject applies the treatment |
-| `rel.duration` | Time | 
+| `RQ*dom.os` | Interaction | Interaction effect between quality defects and domain knowledge, i.e., the mitigation of the defect's influence through domain knowledge |
+| (`RQ`) |  Main Factor | Influence of a requirements quality defect on connecting entities wrongly |
+| (`dom.os`) | Domain knowledge | Influence of the availability of domain knowledge |
+| `RQ*period` | Carryover | Interaction effect between the treatment and the period, i.e., whether some treatments have a stronger effect in later periods |
+| (`period`) | Sequence effect | Period in which the subject applies the treatment |
+| `rel.duration` | Time | (Self-made) time pressure to complete the domain model |
+| *rest* | Confounders | Context factors influencing the causal relationships. |
+
+Predictors in brackets (e.g., (`RQ`)) are implied by the interaction effects (e.g., `RQ*dom.os`) and do not explicitly appear in the formula.
 
 ```{r formula}
 formula <- associations.wrong | trials(associations.expected) ~ 1 + 
