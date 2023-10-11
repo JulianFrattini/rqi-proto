@@ -141,7 +141,7 @@ We perform a posterior predictive check to ensure that the model has learned pro
 brms::pp_check(m, type="bars", ndraws=ndraws)
 ```
 
-The distribution of draws still encompasses the actually obsered data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data.
+The distribution of draws still encompasses the actually observed data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data.
 
 Because we only trained one model, there is no need to select the best performing model using leave-one-out comparison `loo_compare`.
 

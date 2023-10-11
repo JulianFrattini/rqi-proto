@@ -1,0 +1,151 @@
+---
+title: "Requirements Quality Impact on Missing Associations"
+author: "Julian Frattini"
+date: '2023-10-11'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+source("../util/setup.R")
+source("../util/model-eval.R")
+```
+
+This document contains the investigation of the impact of **requirements quality** on the number of **missing associations** in the process of domain modeling. An association is missing if it is contained in the gold standard (i.e., how the domain model *should* look like when derived correctly from a requirements specification) but not in the domain model delivered by an experiment participant.
+
+## Data Loading
+
+```{r data}
+source("../util/data-preprocessing.R")
+d <- load.data()
+```
+
+## Bayesian Data Analysis 
+
+We perform a Bayesian data analysis to answer the question: which factors influence the number of missing associations in a domain model.
+
+### Formula Definition and Prior Selection
+
+We derive our formula from our DAG to infer the strength of causal relationships from it.
+
+```{r formula}
+formula <- associations.missing | trials(associations.expected) ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  rel.duration + 
+  exp.se.scaled + exp.re.scaled + edu + primary.role + 
+  model.train + model.occ +
+  dom.os + dom.db
+```
+
+For each predictor, we select an appropriate prior that reflects our prior belief about the causal relationship. We use weakly informative priors to allow the model in the later estimation step to infer the strength of the causal relations itself. The only exceptions are:
+
+```{r priors}
+priors <- c(
+  prior(normal(-0.5, 0.5), class=Intercept),
+  prior(normal(0, 0.3), class=b),
+  prior(weibull(2, 1), class=sd)
+)
+```
+
+#### Prior Predictive Checks
+
+We sample directly from the priors (i.e., sample without the model updating its parameter distributions based on the observed data) to evaluate the feasibility of the priors.
+
+```{r model-sample-priors}
+m.prior <-
+  brm(data = d, family = binomial, formula, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, sample_prior="only",
+    file = "fits/missing.associations.prior"
+  )
+```
+
+With the samples from the prior distributions, we conduct a prior predictive check to ensure that the priors are appropriate, i.e., the actual observations are realistic given the prior knowledge of the model.
+
+```{r prior-predictive-check}
+ndraws <- 100
+priorpc <- brms::pp_check(type="bars", m.prior, ndraws=ndraws)
+priorpc
+```
+
+The distribution of draws encompasses the actually observed data, meaning that the actual observations lie within the realm of belief defined by the priors. We accept our priors as feasible.
+
+### Model Training
+
+Now, we execute the estimation step by updating the prior distributions based on the observed data `d`.
+
+```{r model}
+m <-
+  brm(data = d, family = binomial, formula, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, 
+    file = "fits/missing.associations"
+  )
+```
+
+We perform a posterior predictive check to ensure that the model has learned properly.
+
+```{r posterior-predictive-check}
+brms::pp_check(m, type="bars", ndraws=ndraws)
+```
+
+The distribution of draws still encompasses the actually observed data. However, the distributions have not become significantly narrower around their mean, which leaves room for improvement.
+
+Because we only trained one model, there is no need to select the best performing model using leave-one-out comparison `loo_compare`.
+
+We visualize the summary of updated posterior distributions - which does not yet answer the initial question, but indicates the direction and strength that each predictor has on the response variable.
+
+```{r model-summary}
+summary(m)
+```
+
+### Model Evaluation
+
+#### Posterior Predictions
+
+We let the model predict the response variable with a fixed independent variable (RQ=1 (passive voice), RQ=2 (ambiguous pronoun), and RQ=3 (passive voice + ambiguous pronoun)) and representative values for the context factors. This posterior prediction takes all uncertainty, which the model picked up, into account.
+
+```{r posterior-comparison-passive}
+evaluate.model(model=m, treatment=1)
+```
+
+```{r posterior-comparison-pronoun}
+evaluate.model(model=m, treatment=2)
+```
+
+```{r posterior-comparison-passive-pronoun}
+evaluate.model(model=m, treatment=3)
+```
+
+These predictions show that the use of passive voice has a slight while the use of ambiguous pronouns has a strong impact on the number of missing associations in a domain model.
+
+#### Marginal Effect
+
+Additionally, we look at some marginal and interaction effects. Marginal effects represent the isolated effect of one variable on the outcome while all other effects are fixed at at a representative value. Interaction effects visualize the interaction between two predictors.
+
+For example, the marginal impact of the different levels of domain knowledge look as follows:
+
+```{r marginal-domainknowledge}
+conditional_effects(m, effects="dom.os")
+```
+
+The marginal effect of the relative duration shows the longer time a participant took, the less associations were missed. Time pressure remains an important factor for domain model completeness.
+
+```{r marginal-duration}
+conditional_effects(m, effects="rel.duration")
+```
+
+Next, we visualize the interaction effect between the period variable (i.e., the time slot in which a specific requirements specification was processed) and the treatment to identify any potential carryover effects.
+
+```{r interaction-treatment-period}
+conditional_effects(m, effects=c("period", "period:RQ"))
+```
+
+The period has a notably decreasing impact, hinting at a learning effect that is factored out of the other variables by including the period variable. The interaction shows several effects:
+
+1. The later in the experiment a subject applies either no quality defect (`RQ=0`) or pure passive voice (`RQ=1`), the smaller the impact of the period on the response variable is.
+2. The later in the experiment a subject applies ambiguous pronouns (`RQ=2` and `RQ=3`), the stronger the impact of the period on the response variable is.
+
+This hints at the fact that subjects get used to passive voice, i.e., passive voice has less impact the more often it is encountered, but ambiguous pronouns increasingly risk missing more associations.
