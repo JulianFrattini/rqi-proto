@@ -1,8 +1,5 @@
 # Requirements Quality Impact: Prototype Study
 
-
-[![GitHub](https://img.shields.io/github/license/JulianFrattini/rqi-proto)](./LICENSE)
-
 This repository contains the replication package for the prototype study that empirically investigates the impact of requirements quality defects. It is the first implementation of the requirements quality theory [1] with the goal of quantifying the impact that alleged requirements quality defects (like passive voice or ambiguous pronouns) have on subsequent software engineering activities (like domain modeling).
 
 The study comprises of an experiment in which experiment participants were tasked to generate one domain model for each of four single sentence natural language requirements specifications. Each specification contained different requirements quality defects (passive voice and ambiguous pronouns). The experiment is used to evaluate whether these alleged quality defects have an impact on the properties of the resulting domain model. The experiment is an external, differentiated replication of a study by Femmer et al. [2].
