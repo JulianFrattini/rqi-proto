@@ -42,4 +42,4 @@ This repository contains the following files:
 
 Copyright © 2023 Julian Frattini
 
-This work (source code) is licensed under [GNU General Public License v3.0](./LICENSE).
+This work (source code) is licensed under [MIT License](./LICENSE).
