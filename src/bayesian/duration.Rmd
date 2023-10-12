@@ -58,8 +58,23 @@ ggdag_status(dag,
 
 We derive our formula from our DAG to infer the strength of causal relationships from it.
 
+#### Model Definition
+
+Based on the DAG, we construct a model with the following parameters:
+
+| Term | Predictor | Rationale |
+|---|---|---|
+| `0` | Intercept | Disabling the intercept because the data is centered around 0 |
+| `(1|PID)` | Participant-specific variability | Variation in the duration caused by the individual experiment participants |
+| `RQ*period` | Carryover | Interaction effect between the treatment and the period, i.e., whether some treatments have a stronger effect in later periods |
+| (`RQ`) |  Main Factor | Influence of a requirements quality defect on connecting entities wrongly |
+| (`period`) | Sequence effect | Period in which the subject applies the treatment |
+| *rest* | Confounders | Context factors influencing the causal relationships. |
+
+Predictors in brackets (e.g., (`RQ`)) are implied by the interaction effects (e.g., `RQ*period`) and do not explicitly appear in the formula.
+
 ```{r formula}
-formula <- rel.duration ~ 1 + 
+formula <- rel.duration ~ 0 + 
                (1|PID)+ RQ*period +
                exp.se.scaled + exp.re.scaled + edu + primary.role + 
                dom.os + dom.db + 
@@ -72,7 +87,6 @@ For each predictor, we select an appropriate prior that reflects our prior belie
 
 ```{r priors}
 priors <- c(
-  prior(normal(0, 1), class=Intercept),
   prior(normal(0, 0.3), class=b),
   prior(weibull(2,1), class=sigma),
   prior(weibull(2,1), class=sd)
@@ -88,7 +102,7 @@ m.prior <-
   brm(data = d, family = gaussian, formula, prior = priors,
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
     seed = 4, sample_prior="only",
-    #file = "fits/duration.prior"
+    file = "fits/duration.prior"
   )
 ```
 
@@ -119,7 +133,7 @@ We perform a posterior predictive check to ensure that the model has learned pro
 brms::pp_check(m, ndraws=100)
 ```
 
-The distribution of draws still encompasses the actually observed data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data.
+The distribution of draws still encompasses the actually observed data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data. However, the model does not fully reflect the form of the actual data, which hints at the necessity to rethink the chosen distribution type of the response variable.
 
 Because we only trained one model, there is no need to select the best performing model using leave-one-out comparison `loo_compare`.
 
@@ -153,11 +167,10 @@ For both independent variables, the posterior predictions do not lean strongly t
 
 #### Marginal and Interaction Effects
 
-Finally, we plot the marginal effect of interesting context factors to see their impact. 
-
+Finally, we plot marginal and interaction effects of interesting context factors to see their isolated impact. For example, the marginal effect of the `period` variable shows a slight learning effect. The conditional effect between the `period` variable and the treatment `RQ` shows that this effect is fairly comparable for most treatments except `RQ=1`. This implies a slight carryover-effect, i.e., the effect of a treatment slightly depends on the period in which it is applied. In this case, the later pure passive voice is applied to the requirements specification, the stronger its (negative) effect on the relative duration.
 
 ```{r marginal-training}
 conditional_effects(m, effects=c("period", "period:RQ"))
 ```
 
-
+None of the other context factors have a major influence on the response variable according to the summary.
