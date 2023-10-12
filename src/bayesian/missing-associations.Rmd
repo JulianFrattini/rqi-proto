@@ -37,6 +37,7 @@ Based on the DAG, we construct a model with the following parameters: (see `wron
 formula <- associations.missing | trials(associations.expected) ~ 1 + 
   (1|PID) + 
   RQ*period +
+  entities.missing +
   rel.duration + 
   exp.se.scaled + exp.re.scaled + edu + primary.role + 
   model.train + model.occ +
@@ -133,6 +134,12 @@ For example, the marginal impact of the different levels of domain knowledge loo
 
 ```{r marginal-domainknowledge}
 conditional_effects(m, effects="dom.os")
+```
+
+The marginal effect of the number of missing entities (`entities.missing`) shows the strong impact of missing entities on missing associations. Logically, an association must be either missing or wrong if at least one of its entities is missing. Including this predictor factors out this propagated effect.
+
+```{r marginal-entities}
+conditional_effects(m, effects="entities.missing")
 ```
 
 The marginal effect of the relative duration shows the longer time a participant took, the less associations were missed. Time pressure remains an important factor for domain model completeness.
