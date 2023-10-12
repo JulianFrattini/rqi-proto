@@ -29,6 +29,10 @@ We perform a Bayesian data analysis to answer the question: which factors influe
 
 We derive our formula from our DAG to infer the strength of causal relationships from it.
 
+#### Model Definition
+
+Based on the DAG, we construct a model with the following parameters: (see `wrong-associations.Rmd` for details)
+
 ```{r formula}
 formula <- associations.missing | trials(associations.expected) ~ 1 + 
   (1|PID) + 
@@ -39,7 +43,7 @@ formula <- associations.missing | trials(associations.expected) ~ 1 +
   dom.os + dom.db
 ```
 
-For each predictor, we select an appropriate prior that reflects our prior belief about the causal relationship. We use weakly informative priors to allow the model in the later estimation step to infer the strength of the causal relations itself. The only exceptions are:
+For each predictor, we select an appropriate prior that reflects our prior belief about the causal relationship. We use weakly informative priors to allow the model in the later estimation step to infer the strength of the causal relations itself.
 
 ```{r priors}
 priors <- c(

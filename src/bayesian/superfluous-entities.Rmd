@@ -29,16 +29,29 @@ We perform a Bayesian data analysis to answer the question: which factors influe
 
 We derive our formula from our DAG to infer the strength of causal relationships from it.
 
-#### Primary Model
+#### Models
+
+Based on the DAG, we construct a model with the following parameters:
+
+| Term | Predictor | Rationale |
+|---|---|---|
+| `1` | Intercept | General likelihood of adding superfluous entities |
+| `(1|PID)` | Participant-specific variability | General ability of an individual participant with id `PID` to add a superfluous entity to the domain model |
+| `RQ*period` | Carryover | Interaction effect between the treatment and the period, i.e., whether some treatments have a stronger effect in later periods |
+| (`RQ`) |  Main Factor | Influence of a requirements quality defect |
+| (`period`) | Sequence effect | Period in which the subject applies the treatment |
+| `rel.duration` | Time | (Self-made) time pressure to complete the domain model |
+| *rest* | Confounders | Context factors influencing the causal relationships. |
+
+Predictors in brackets (e.g., (`RQ`)) are implied by the interaction effects (e.g., `RQ*dom.os`) and do not explicitly appear in the formula.
 
 ```{r formula}
 formula <- entities.superfluous ~ 1 + 
   (1|PID) + 
-  RQ +
-  dom.db + dom.os +
   RQ*period +
   rel.duration + 
   exp.se.scaled + exp.re.scaled + edu + primary.role + 
+  dom.db + dom.os +
   model.train + model.occ
 
 #get_prior(formula, data=d, family=zero_inflated_poisson)
@@ -47,26 +60,28 @@ formula <- entities.superfluous ~ 1 +
 ```{r priors}
 priors <- c(
   prior(normal(0, 1), class=Intercept),
-  prior(normal(0, 1), class=b),
+  prior(normal(0, 0.3), class=b),
   prior(weibull(2, 1), class=sd)
 )
 ```
 
 #### Prior Predictive Checks
 
-```{r model-priors}
-m.prior <-
+```{r model-priors-zip}
+m.prior.zip <-
   brm(data = d, family = zero_inflated_poisson, formula, prior = priors,
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
     seed = 4, sample_prior="only",
-    #file = "fits/superfluous.entities.prior"
+    file = "fits/superfluous.entities.prior"
   )
 ```
 
 ```{r prior-predictive-check}
 ndraws <- 100
-priorpc <- brms::pp_check(m.prior, ndraws=ndraws, type="bars")
-priorpc
+
+priorpc.zip <- brms::pp_check(m.prior.zip, ndraws=ndraws, type="bars")
+
+priorpc.zip 
 ```
 
 ### Model Training
@@ -89,7 +104,7 @@ postpc <- brms::pp_check(m, ndraws=ndraws, type="bars")
 postpc
 ```
 
-The distribution of draws still encompasses the actually obsered data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data.
+The distribution of draws is not yet close enough to the real data.
 
 Because we only trained one model, there is no need to select the best performing model using leave-one-out comparison `loo_compare`.
 
@@ -117,66 +132,27 @@ evaluate.model(model=m, treatment=2)
 evaluate.model(model=m, treatment=3)
 ```
 
+The posterior predictions indicate that pure ambiguous pronouns (not in conjunction with passive voice) benefit superfluous entities.
+
 #### Marginal Effect
 
+Additionally, we look at some marginal and interaction effects. Marginal effects represent the isolated effect of one variable on the outcome while all other effects are fixed at at a representative value. Interaction effects visualize the interaction between two predictors.
+
+we visualize the interaction effect between the period variable (i.e., the time slot in which a specific requirements specification was processed) and the treatment to identify any potential carryover effects. The learning effect is minimal and the carryover effect of all treatments largely negligible. Only the impact of pure ambiguous pronouns (`RQ=2`) scales with the period variable.
+
+```{r interaction-treatment-period}
+conditional_effects(m, effects=c("period", "period:RQ"))
+```
+
+Visualizing the marginal effect of the relative duration shows that the longer a participant took the more likely they were to introduce superfluous entities.
+
+```{r marginal-effects-duration}
+conditional_effects(m, effects="rel.duration")
+```
+
+The marginal effect of modeling occurance (i.e., how often a participant uses modeling techniques in their job) shows a slight effect of the middle frequencies. This hints at the fact that both (1) experienced modelers (`model.occ=often`) know what they are doing and (2) novel modelers (`model.occ=none`) paid closer attention to the task.
+
 ```{r marginal-effects-modeling}
-marginal.effect.modeling.mo <- marginaleffects::plot_predictions(
-  m,
-  condition = "model.occ",
-  type = "response"
-)
-
-marginal.effect.modeling.cat <- marginaleffects::plot_predictions(
-  m2,
-  condition = "model.occ",
-  type = "response"
-)
-
-marginal.effect.modeling.mo | marginal.effect.modeling.cat
-```
-```{r marginal-effects-modeling-viz}
-m1 <- marginal.effect.modeling.mo +
-  labs(y="Number of Superfluous Entities", x="Task experience in Monotonic Model") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
-m2 <- marginal.effect.modeling.cat +
-  labs(y="Number of Superfluous Entities", x="Task experience in Categorical Model") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
-
-m1+m2
-ggsave(filename= "figs/rqi-task-exp.pdf", width=6.5, height=3)
+conditional_effects(m, effects="model.occ")
 ```
 
-
-```{r marginal-effects-exp}
-marginal.effect.exp.se <- marginaleffects::plot_predictions(
-  m, condition = "exp.se.scaled",
-  type = "response"
-)
-
-marginal.effect.exp.re <- marginaleffects::plot_predictions(
-  m, condition = "exp.re.scaled",
-  type = "response"
-)
-
-marginal.effect.exp.se | marginal.effect.exp.re
-```
-
-```{r}
-m3 <- marginal.effect.exp.se +
-  labs(y="Number of Superfluous Entities", x="Experience in SE") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
-m4 <- marginal.effect.exp.re +
-  labs(y="Number of Superfluous Entities", x="Experience in RE") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
-
-m3+m4
-ggsave(filename= "figs/rqi-exp-impact.pdf", width=6.5, height=3)
-```
-
-
-```{r marginal-effects}
-marginaleffects::plot_predictions(m,
-  condition = "primary.role",
-  type = "response"
-)
-```

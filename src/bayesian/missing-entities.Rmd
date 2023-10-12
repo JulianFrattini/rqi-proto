@@ -56,6 +56,20 @@ We derive our formula from our DAG to infer the strength of causal relationships
 
 #### Model Definition
 
+Based on the DAG, we construct a model with the following parameters:
+
+| Term | Predictor | Rationale |
+|---|---|---|
+| `1` | Intercept | General challenge of missing an entity |
+| `(1|PID)` | Participant-specific variability | Participant-specific defiation from the intercept in generally missing an entity |
+| `RQ*period` | Carryover | Interaction effect between the treatment and the period, i.e., whether some treatments have a stronger effect in later periods |
+| (`RQ`) |  Main Factor | Influence of a requirements quality defect on connecting entities wrongly |
+| (`period`) | Sequence effect | Period in which the subject applies the treatment |
+| `rel.duration` | Time | (Self-made) time pressure to complete the domain model |
+| *rest* | Confounders | Context factors influencing the causal relationships. |
+
+Predictors in brackets (e.g., (`RQ`)) are implied by the interaction effects (e.g., `RQ*dom.os`) and do not explicitly appear in the formula.
+
 ```{r formula}
 formula <- entities.missing | trials(entities.expected) ~ 1 + 
   (1|PID) + 
@@ -66,12 +80,12 @@ formula <- entities.missing | trials(entities.expected) ~ 1 +
   model.train + model.occ
 ```
 
-TODO justify priors
+For each predictor, we select an appropriate prior that reflects our prior belief about the causal relationship. We use weakly informative priors to allow the model in the later estimation step to infer the strength of the causal relations itself.
 
 ```{r priors}
 priors <- c(
-  prior(normal(-1, 0.5), class=Intercept),
-  prior(normal(0, 0.3), class=b),
+  prior(normal(-1, 0.2), class=Intercept),
+  prior(normal(0, 0.1), class=b),
   prior(weibull(2, 1), class=sd)
 )
 ```
@@ -146,11 +160,14 @@ evaluate.model(model=m, treatment=2)
 evaluate.model(model=m, treatment=3)
 ```
 
-#### Marginal Effect
+The posterior predictions show a slight effect of the use of ambiguous pronouns on the number of missing entities.
 
-```{r marginal-effects}
-marginaleffects::plot_predictions(m2, 
-  condition = "model.occ", 
-  type="link", transform=inv_logit_scaled
-)
+#### Marginal and Interaction Effects
+
+We visualize the interaction effect between the period variable (i.e., the time slot in which a specific requirements specification was processed) and the treatment to identify any potential carryover effects.
+
+```{r interaction-treatment-period}
+conditional_effects(m, effects=c("period", "period:RQ"))
 ```
+
+The visualizations show a slight overall learning effect (i.e., a slight negative slope of the `period` variable) which is diversified, but fairly negligible for the different treatments. 

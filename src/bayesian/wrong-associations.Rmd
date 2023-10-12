@@ -70,7 +70,7 @@ Based on the DAG, we construct a model with the following parameters:
 | `rel.duration` | Time | (Self-made) time pressure to complete the domain model |
 | *rest* | Confounders | Context factors influencing the causal relationships. |
 
-Predictors in brackets (e.g., (`RQ`)) are implied by the interaction effects (e.g., `RQ*dom.os`) and do not explicitly appear in the formula.
+Predictors in brackets (e.g., (`RQ`)) are implied by the interaction effects (e.g., `RQ*dom.os`) and do not explicitly appear in the formula. The explicit interaction effect `RQ*dom.os` stems from the hypothesis that domain knowledge may compensate ambiguity in requirements specifications.
 
 ```{r formula}
 formula <- associations.wrong | trials(associations.expected) ~ 1 + 
