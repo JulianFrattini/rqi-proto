@@ -95,21 +95,39 @@ priors <- c(
 
 #### Prior Predictive Checks
 
-We sample directly from the priors (i.e., sample without the model updating its parameter distributions based on the observed data) to evaluate the feasibility of the priors.
+We consider two response variable distributions: normal and skewed-normal distribution.
 
-```{r model-sample-priors}
-m.prior <-
+```{r ndraws}
+ndraws <- 100
+```
+
+We sample `ndraws=100` draws directly from the priors (i.e., sample without the model updating its parameter distributions based on the observed data) to evaluate the feasibility of the priors. 
+
+```{r model-priors-normal}
+m.prior.norm <-
   brm(data = d, family = gaussian, formula, prior = priors,
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
     seed = 4, sample_prior="only",
-    file = "fits/duration.prior"
+    file = "fits/duration.norm.prior"
+  )
+```
+
+```{r model-priors-skewnormal}
+m.prior.skew <-
+  brm(data = d, family = skew_normal, formula, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, sample_prior="only",
+    file = "fits/duration.skew.prior"
   )
 ```
 
 With the samples from the prior distributions, we conduct a prior predictive check to ensure that the priors are appropriate, i.e., the actual observations are realistic given the prior knowledge of the model.
 
 ```{r prior-predictive-check}
-brms::pp_check(m.prior, ndraws=100)
+priorpc.norm <- brms::pp_check(m.prior.norm, ndraws=ndraws)
+priorpc.skew <- brms::pp_check(m.prior.skew, ndraws=ndraws)
+
+priorpc.norm | priorpc.skew
 ```
 
 The distribution of draws encompasses the actually observed data, meaning that the actual observations lie within the realm of belief defined by the priors. We accept our priors as feasible.
@@ -119,23 +137,53 @@ The distribution of draws encompasses the actually observed data, meaning that t
 Now, we execute the estimation step by updating the prior distributions based on the observed data `d`.
 
 ```{r model}
-m <-
+m.norm <-
   brm(data = d, family = gaussian, formula, prior = priors,
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
     seed = 4, 
-    file = "fits/duration"
+    file = "fits/duration.norm"
+  )
+```
+
+```{r model-skew}
+m.skew <-
+  brm(data = d, family = skew_normal, formula, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, 
+    file = "fits/duration.skew"
   )
 ```
 
 We perform a posterior predictive check to ensure that the model has learned properly.
 
 ```{r posterior-predictive-check}
-brms::pp_check(m, ndraws=100)
+postpc.norm <- brms::pp_check(m.norm, ndraws=ndraws)
+postpc.skew <- brms::pp_check(m.skew, ndraws=ndraws)
+
+postpc.norm | postpc.skew
 ```
 
 The distribution of draws still encompasses the actually observed data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data. However, the model does not fully reflect the form of the actual data, which hints at the necessity to rethink the chosen distribution type of the response variable.
 
-Because we only trained one model, there is no need to select the best performing model using leave-one-out comparison `loo_compare`.
+### Model Comparison
+
+We compare the predictive capability of the two models using the leave-one-out comparison.
+
+```{r loo-compare}
+m.norm <- add_criterion(m.norm, criterion = "loo")
+m.skew <- add_criterion(m.skew, criterion = "loo")
+
+loo_compare(m.norm, m.skew)
+```
+
+The model using the skewed normal distribution outperforms the other model in terms of predictive power according to loo_compare and will be used for evaluation.
+
+```{r model-selection}
+m <- m.skew
+```
+
+
+### Model Selection
 
 We visualize the summary of updated posterior distributions - which does not yet answer the initial question, but indicates the direction and strength that each predictor has on the response variable.
 
@@ -174,3 +222,8 @@ conditional_effects(m, effects=c("period", "period:RQ"))
 ```
 
 None of the other context factors have a major influence on the response variable according to the summary.
+
+```{r}
+conditional_effects(m, effects="dom.os")
+```
+
