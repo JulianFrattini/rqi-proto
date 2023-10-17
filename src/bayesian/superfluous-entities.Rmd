@@ -19,6 +19,8 @@ This document contains the investigation of the impact of **requirements quality
 ```{r data}
 source("../util/data-preprocessing.R")
 d <- load.data()
+
+ndraws <- 100
 ```
 
 ## Bayesian Data Analysis 
@@ -57,56 +59,107 @@ formula <- entities.superfluous ~ 1 +
 #get_prior(formula, data=d, family=zero_inflated_poisson)
 ```
 
-```{r priors}
-priors <- c(
+We select uninformative priors for the predictors in the formula:
+
+```{r priors-zip}
+priors.zip <- c(
   prior(normal(0, 1), class=Intercept),
   prior(normal(0, 0.3), class=b),
-  prior(weibull(2, 1), class=sd)
+  prior(weibull(2, 1.5), class=sd),
+  prior(beta(2, 4), class=zi)
 )
 ```
+
+```{r priors-zinb}
+priors.zinb <- c(
+    prior(normal(0, 1), class=Intercept),
+    prior(normal(0, 0.2), class=b),
+    prior(weibull(2, 1.5), class=sd),
+    prior(gamma(2, 2), class=shape),
+    prior(beta(2, 4), class=zi)
+  )
+```
+
 
 #### Prior Predictive Checks
 
 ```{r model-priors-zip}
 m.prior.zip <-
-  brm(data = d, family = zero_inflated_poisson, formula, prior = priors,
+  brm(data = d, family = zero_inflated_poisson, formula, prior = priors.zip,
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
     seed = 4, sample_prior="only",
-    file = "fits/superfluous.entities.prior"
+    file = "fits/superfluous.entities.zip.prior"
+  )
+```
+
+```{r model-priors-zip}
+m.prior.zinb <-
+  brm(data = d, family = zero_inflated_negbinomial, formula, prior = priors.zinb,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, sample_prior="only",
+    file = "fits/superfluous.entities.zinb.prior"
   )
 ```
 
 ```{r prior-predictive-check}
-ndraws <- 100
 
 priorpc.zip <- brms::pp_check(m.prior.zip, ndraws=ndraws, type="bars")
+priorpc.zinb <- brms::pp_check(m.prior.zinb, ndraws=ndraws, type="bars")
 
-priorpc.zip 
+priorpc.zip / priorpc.zinb
 ```
 
 ### Model Training
 
 Now, we execute the estimation step by updating the prior distributions based on the observed data `d`.
 
-```{r model}
-m <-
-  brm(data = d, family = zero_inflated_poisson, formula, prior = priors,
+```{r model-zip}
+m.zip <-
+  brm(data = d, family = zero_inflated_poisson, formula, prior = priors.zip,
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
     seed = 4, 
-    file = "fits/superfluous.entities"
+    file = "fits/superfluous.entities.zip"
+  )
+```
+
+```{r model-zinb}
+m.zinb <-
+  brm(data = d, family = zero_inflated_negbinomial, formula, prior = priors.zinb,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, 
+    file = "fits/superfluous.entities.zinb"
   )
 ```
 
 We perform a posterior predictive check to ensure that the model has learned properly.
 
 ```{r posterior-predictive-check}
-postpc <- brms::pp_check(m, ndraws=ndraws, type="bars")
-postpc
+postpc.zip <- brms::pp_check(m.zip, ndraws=ndraws, type="bars")
+postpc.zinb <- brms::pp_check(m.zinb, ndraws=ndraws, type="bars")
+
+postpc.zip / postpc.zinb
 ```
 
 The distribution of draws is not yet close enough to the real data.
 
-Because we only trained one model, there is no need to select the best performing model using leave-one-out comparison `loo_compare`.
+### Model Comparison
+
+We compare the predictive capability of the two models using the leave-one-out comparison.
+
+```{r loo-compare}
+m.zip <- add_criterion(m.zip, criterion = "loo")
+m.zinb <- add_criterion(m.zinb, criterion = "loo")
+
+loo_compare(m.zip, m.zinb)
+```
+
+According to loo-compare, there is no significant difference in the predictive power of the two models. We can select and proceed either of the two models.
+
+```{r model-selection}
+m <- m.zip
+```
+
+### Model Summary
 
 We visualize the summary of updated posterior distributions - which does not yet answer the initial question, but indicates the direction and strength that each predictor has on the response variable.
 
