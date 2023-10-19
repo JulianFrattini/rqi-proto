@@ -126,6 +126,12 @@ evaluate.model(model=m, treatment=3)
 
 These predictions show that the use of passive voice has a slight while the use of ambiguous pronouns has a strong impact on the number of missing associations in a domain model.
 
+These values can also be obtained via `brms::conditional_effects`: by selecting the treatment `RQ` as the effect, the `posterior_epred` method predicts the distribution of the expected value (with a trial size fized to 1) when fixing the treatment to one of the four available factors while maintaining all other independent variables at representative values.
+
+```{r posterior-comparison}
+conditional_effects(m, effects="RQ", method="posterior_epred")
+```
+
 #### Marginal Effect
 
 Additionally, we look at some marginal and interaction effects. Marginal effects represent the isolated effect of one variable on the outcome while all other effects are fixed at at a representative value. Interaction effects visualize the interaction between two predictors.

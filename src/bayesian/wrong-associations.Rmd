@@ -34,7 +34,8 @@ dag <- dagify(
   wrong ~ rq + dur + edu + exp + dom + task + tool,
   exposure = "rq",
   outcome = "wrong",
-  labels = c(wrong = "wrong.associations", dur = "duration",
+  labels = c(wrong = "wrong.associations", 
+             dur = "duration",
              rq= "requirements.quality", 
              edu = "education", exp="experience",
              dom = "domain.knowledge", task = "task.experience",
@@ -173,6 +174,12 @@ evaluate.model(model=m, treatment=2)
 
 ```{r posterior-comparison-passive-pronoun}
 evaluate.model(model=m, treatment=3)
+```
+
+These values can also be obtained via `brms::conditional_effects`: by selecting the treatment `RQ` as the effect, the `posterior_epred` method predicts the distribution of the expected value (with a trials size of 1) when fixing the treatment to one of the four available factors while maintaining all other independent variables at representative values.
+
+```{r posterior-comparison}
+conditional_effects(m, effects="RQ", method="posterior_epred")
 ```
 
 #### Marginal and Interaction Effects

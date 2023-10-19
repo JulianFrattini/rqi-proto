@@ -162,6 +162,12 @@ evaluate.model(model=m, treatment=3)
 
 The posterior predictions show a slight effect of the use of ambiguous pronouns on the number of missing entities.
 
+These values can also be obtained via `brms::conditional_effects`: by selecting the treatment `RQ` as the effect, the `posterior_epred` method predicts the distribution of the expected value when fixing the treatment to one of the four 
+
+```{r posterior-comparison}
+conditional_effects(m, effects="RQ", method="posterior_epred")
+```
+
 #### Marginal and Interaction Effects
 
 We visualize the interaction effect between the period variable (i.e., the time slot in which a specific requirements specification was processed) and the treatment to identify any potential carryover effects.

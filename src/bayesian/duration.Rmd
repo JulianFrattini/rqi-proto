@@ -213,6 +213,12 @@ evaluate.model(model=m, treatment=3)
 
 For both independent variables, the posterior predictions do not lean strongly to either of the two signs. We conclude that the effect of passive voice and ambiguous pronouns on the duration of domain modeling is negligible.
 
+These values can also be obtained via `brms::conditional_effects`: by selecting the treatment `RQ` as the effect, the `posterior_epred` method predicts the distribution of the expected value when fixing the treatment to one of the four available factors while maintaining all other independent variables at representative values.
+
+```{r posterior-comparison}
+conditional_effects(m, effects="RQ", method="posterior_epred")
+```
+
 #### Marginal and Interaction Effects
 
 Finally, we plot marginal and interaction effects of interesting context factors to see their isolated impact. For example, the marginal effect of the `period` variable shows a slight learning effect. The conditional effect between the `period` variable and the treatment `RQ` shows that this effect is fairly comparable for most treatments except `RQ=1`. This implies a slight carryover-effect, i.e., the effect of a treatment slightly depends on the period in which it is applied. In this case, the later pure passive voice is applied to the requirements specification, the stronger its (negative) effect on the relative duration.
