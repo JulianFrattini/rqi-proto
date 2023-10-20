@@ -37,14 +37,16 @@ We draw a Directed Acyclic Graph (DAG) to make our causal assumptions explicit.
 ```{r dag}
 dag <- dagify(
   dur ~ rq + edu + exp + dom + task + tool,
+  task ~ exp,
+  dom ~ exp,
   exposure = "rq",
   outcome = "dur",
   labels = c(dur = "duration", rq="requirements.quality",
              edu = "education", exp="experience",
              dom = "domain.knowledge", task = "task.experience",
              tool = "tool.experience"),
-  coords = list(x=c(rq=1, dur=2, edu=1, exp=1, dom=1, task=1, tool=1),
-                y=c(rq=0, dur=-1.5, edu=-2, exp=-2.5, dom=-3, task=-3.5, tool=-4))
+  coords = list(x=c(rq=1, dur=2, edu=1, exp=1, dom=1.2, task=1, tool=1),
+                y=c(rq=0, dur=-1.5, edu=-2, exp=-3.5, dom=-4, task=-3, tool=-2.5))
 )
 
 ggdag_status(dag, 
@@ -165,7 +167,7 @@ postpc.norm | postpc.skew
 
 The distribution of draws still encompasses the actually observed data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data. However, the model does not fully reflect the form of the actual data, which hints at the necessity to rethink the chosen distribution type of the response variable.
 
-### Model Comparison
+### Comparison regarding predictive Power
 
 We compare the predictive capability of the two models using the leave-one-out comparison.
 
@@ -176,14 +178,78 @@ m.skew <- add_criterion(m.skew, criterion = "loo")
 loo_compare(m.norm, m.skew)
 ```
 
-The model using the skewed normal distribution outperforms the other model in terms of predictive power according to loo_compare and will be used for evaluation.
+The model using the skewed normal distribution outperforms the other model in terms of predictive power according to loo_compare.
+
+### Comparison regarding conditional Independencies
+
+Additionally, we test for conditional independencies. According to our DAG, we assume that $exp.se \rightarrow duration$, $exp.se \rightarrow dom$, and $dom \rightarrow duration$. We test whether the first and/or last hypothesis are true by comparing the selected model with other candidates where one of the two factors is missing. 
+
+```{r comparison-formula}
+f.no.exp <- rel.duration ~ 0 + 
+               (1|PID)+ RQ*period +
+               exp.re.scaled + edu + primary.role + 
+               dom.os + dom.db + 
+               model.train + model.occ 
+
+f.no.dom <- rel.duration ~ 0 + 
+               (1|PID)+ RQ*period +
+               exp.se.scaled + exp.re.scaled + edu + primary.role +
+               model.train + model.occ 
+```
+
+```{r model-skew-comp}
+m.skew.no.exp <-
+  brm(data = d, family = skew_normal, f.no.exp, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4
+  )
+
+m.skew.no.dom <-
+  brm(data = d, family = skew_normal, f.no.dom, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4
+  )
+```
+
+We compare the predictors of interest ($\beta_{exp.se\_scaled}$ and $\beta_{dom.os}$) to see whether the estimates change when including either of the variables.
+
+```{r conditional-independencies}
+param.m.skew <- mcmc_intervals_data(m.skew)
+param.m.skew.no.exp <- mcmc_intervals_data(m.skew.no.exp)
+param.m.skew.no.dom <- mcmc_intervals_data(m.skew.no.dom)
+
+param.m.skew$model <- "full model"
+param.m.skew.no.exp$model <- "no exp.se"
+param.m.skew.no.dom$model <- "no dom"
+
+combined.estimates <- rbind(param.m.skew, param.m.skew.no.exp, param.m.skew.no.dom) %>% 
+  filter(parameter %in% c("b_exp.se.scaled", 
+                          "b_dom.os.L", "b_dom.os.Q", "b_dom.os.C", "b_dom.os.E4", 
+                          "b_dom.db.L", "b_dom.db.Q", "b_dom.db.C"))
+
+position.offset <- position_nudge(
+  y = ifelse(
+    combined.estimates$model == "full model",
+    -0.1,
+    ifelse(combined.estimates$model == "no dom", 0.1, 0)))
+
+ggplot(data = combined.estimates,
+       mapping = aes(x = m, y = parameter, color = model)) +
+  geom_linerange(aes(xmin = l, xmax = h), position = position.offset, size = 2) +
+  geom_linerange(aes(xmin = ll, xmax = hh), position = position.offset) +
+  geom_point(position = position.offset, color="black") + 
+  geom_vline(xintercept = 0, linetype="dashed")
+```
+
+It becomes apparent that none of the variables are independent of each other: learning either variable does not diminish the information gained from the other variables. Consequently, we assume all three causal assumptions being correct.
+
+### Model selection
+
+We select `m.skew` as the model to evaluate given that (1) it has the most predictive power and (2) none of the causal assumptions are violated.
 
 ```{r model-selection}
 m <- m.skew
 ```
-
-
-### Model Selection
 
 We visualize the summary of updated posterior distributions - which does not yet answer the initial question, but indicates the direction and strength that each predictor has on the response variable.
 
