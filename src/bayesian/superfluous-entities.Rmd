@@ -27,6 +27,34 @@ ndraws <- 100
 
 We perform a Bayesian data analysis to answer the question: which factors influence the number of wrong associations in a domain model.
 
+### Graphical Causal Model
+
+We draw a Directed Acyclic Graph (DAG) to make our causal assumptions explicit.
+
+```{r dag}
+dag <- dagify(
+  se ~ rq + dur + edu + exp + dom + task + tool,
+  dom ~ exp,
+  exposure = "rq",
+  outcome = "se",
+  labels = c(se = "superfluous.entities", dur = "duration",
+             rq = "requirements.quality",
+             edu = "education", exp="experience",
+             dom = "domain.knowledge", task = "task.experience",
+             tool = "tool.experience"),
+  coords = list(x=c(rq=1, se=2, dur=1.5, edu=1, exp=1, dom=1.2, task=1, tool=1),
+                y=c(rq=-1, se=-1.5, dur=0, edu=-2, exp=-3.5, dom=-4, task=-2.5, tool=-3))
+)
+
+ggdag_status(dag, 
+             use_labels = "label", 
+             text = FALSE) +
+  guides(fill = "none", color = "none") + 
+  theme_dag()
+```
+
+We do not assume a relationship between *requirements quality* and *duration* as we have already disproven this relationship in the [duration](./duration.Rmd) analysis.
+
 ### Formula Definition and Prior Selection
 
 We derive our formula from our DAG to infer the strength of causal relationships from it.
@@ -92,7 +120,7 @@ m.prior.zip <-
   )
 ```
 
-```{r model-priors-zip}
+```{r model-priors-zinb}
 m.prior.zinb <-
   brm(data = d, family = zero_inflated_negbinomial, formula, prior = priors.zinb,
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
@@ -154,6 +182,75 @@ loo_compare(m.zip, m.zinb)
 ```
 
 According to loo-compare, there is no significant difference in the predictive power of the two models. We can select and proceed either of the two models.
+
+### Comparison regarding conditional Independencies
+
+We test for conditional independencies. According to our DAG, we assume that $exp.se \rightarrow superfluous.entities$, $exp.se \rightarrow dom$, and $dom \rightarrow superfluous.entities$. We test whether the first and/or last hypothesis are true by comparing the selected model with other candidates where one of the two factors is missing. 
+
+```{r comparison-formula}
+f.no.exp <- entities.superfluous ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  rel.duration + 
+  exp.re.scaled + edu + primary.role + 
+  dom.db + dom.os +
+  model.train + model.occ
+
+f.no.dom <- entities.superfluous ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  rel.duration + 
+  exp.se.scaled + exp.re.scaled + edu + primary.role +
+  model.train + model.occ
+```
+
+```{r model-skew-comp}
+m.no.exp <-
+  brm(data = d, family = zero_inflated_poisson, f.no.exp, prior = priors.zip,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, 
+  )
+
+m.no.dom <-
+  brm(data = d, family = zero_inflated_poisson, f.no.dom, prior = priors.zip,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4
+  )
+```
+
+We compare the predictors of interest ($\beta_{exp.se\_scaled}$ and $\beta_{dom.os}$) to see whether the estimates change when including either of the variables.
+
+```{r conditional-independencies}
+param.m <- mcmc_intervals_data(m.zip)
+param.m.no.exp <- mcmc_intervals_data(m.no.exp)
+param.m.no.dom <- mcmc_intervals_data(m.no.dom)
+
+param.m$model <- "full model"
+param.m.no.exp$model <- "no exp.se"
+param.m.no.dom$model <- "no dom"
+
+combined.estimates <- rbind(param.m, param.m.no.exp, param.m.no.dom) %>% 
+  filter(parameter %in% c("b_exp.se.scaled", 
+                          "b_dom.os.L", "b_dom.os.Q", "b_dom.os.C", "b_dom.os.E4", 
+                          "b_dom.db.L", "b_dom.db.Q", "b_dom.db.C"))
+
+position.offset <- position_nudge(
+  y = ifelse(
+    combined.estimates$model == "full model",
+    -0.1,
+    ifelse(combined.estimates$model == "no dom", 0.1, 0)))
+
+ggplot(data = combined.estimates,
+       mapping = aes(x = m, y = parameter, color = model)) +
+  geom_linerange(aes(xmin = l, xmax = h), position = position.offset, linewidth = 2) +
+  geom_linerange(aes(xmin = ll, xmax = hh), position = position.offset) +
+  geom_point(position = position.offset, color="black") + 
+  geom_vline(xintercept = 0, linetype="dashed")
+```
+
+It becomes apparent that none of the variables are conditionally independent of each other: learning either variable does not diminish the information gained from the other variables. Consequently, we assume all three causal assumptions being correct.
+
+### Model selection
 
 ```{r model-selection}
 m <- m.zip

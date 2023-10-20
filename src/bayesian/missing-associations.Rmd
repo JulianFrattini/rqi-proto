@@ -25,6 +25,36 @@ d <- load.data()
 
 We perform a Bayesian data analysis to answer the question: which factors influence the number of missing associations in a domain model.
 
+### Graphical Causal Model
+
+We draw a Directed Acyclic Graph (DAG) to make our causal assumptions explicit.
+
+```{r dag}
+dag <- dagify(
+  ma ~ rq + me + dur + edu + exp + dom + task + tool,
+  me ~ rq,
+  dom ~ exp,
+  exposure = "rq",
+  outcome = "ma",
+  labels = c(ma = "missing.association", me="missing.entities",
+             dur = "duration",
+             rq = "requirements.quality",
+             edu = "education", exp="experience",
+             dom = "domain.knowledge", task = "task.experience",
+             tool = "tool.experience"),
+  coords = list(x=c(rq=1, ma=2, me=1.5, dur=1.5, edu=1, exp=1, dom=1.2, task=1, tool=1),
+                y=c(rq=-1, ma=-1.5, me=-0.5, dur=0.5, edu=-2, exp=-3.5, dom=-4, task=-2.5, tool=-3))
+)
+
+ggdag_status(dag, 
+             use_labels = "label", 
+             text = FALSE) +
+  guides(fill = "none", color = "none") + 
+  theme_dag()
+```
+
+We do not assume a relationship between *requirements quality* and *duration* as we have already disproven this relationship in the [duration](./duration.Rmd) analysis.
+
 ### Formula Definition and Prior Selection
 
 We derive our formula from our DAG to infer the strength of causal relationships from it.
@@ -48,9 +78,12 @@ For each predictor, we select an appropriate prior that reflects our prior belie
 
 ```{r priors}
 priors <- c(
-  prior(normal(-0.5, 0.5), class=Intercept),
-  prior(normal(0, 0.3), class=b),
-  prior(weibull(2, 1), class=sd)
+  prior(normal(-0.9, 0.1), class=Intercept),
+  prior(normal(0, 0.5), class=b, coef="RQ1"),
+  prior(normal(0, 0.5), class=b, coef="RQ2"),
+  prior(normal(0, 0.5), class=b, coef="RQ3"),
+  prior(normal(0, 0.1), class=b),
+  prior(weibull(2, 0.5), class=sd)
 )
 ```
 
@@ -100,6 +133,152 @@ The distribution of draws still encompasses the actually observed data. However,
 
 Because we only trained one model, there is no need to select the best performing model using leave-one-out comparison `loo_compare`.
 
+### Comparison regarding conditional Independencies
+
+We test for conditional independencies. 
+
+#### Experience and Domain Knowledge
+
+According to our DAG, we assume that $exp.se \rightarrow missing.associations$, $exp.se \rightarrow dom$, and $dom \rightarrow missing.associations$. We test whether the first and/or last hypothesis are true by comparing the selected model with other candidates where one of the two factors is missing. 
+
+```{r comparison-formula}
+f.no.exp <- associations.missing | trials(associations.expected) ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  entities.missing +
+  rel.duration + 
+  exp.re.scaled + edu + primary.role + 
+  model.train + model.occ +
+  dom.os + dom.db
+
+f.no.dom <- associations.missing | trials(associations.expected) ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  entities.missing +
+  rel.duration + 
+  exp.se.scaled + exp.re.scaled + edu + primary.role + 
+  model.train + model.occ
+```
+
+```{r model-skew-comp}
+m.no.exp <-
+  brm(data = d, family = binomial, f.no.exp, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, 
+  )
+
+m.no.dom <-
+  brm(data = d, family = binomial, f.no.dom, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4
+  )
+```
+
+We compare the predictors of interest ($\beta_{exp.se\_scaled}$ and $\beta_{dom.os}$) to see whether the estimates change when including either of the variables.
+
+```{r conditional-independencies}
+param.m <- mcmc_intervals_data(m)
+param.m.no.exp <- mcmc_intervals_data(m.no.exp)
+param.m.no.dom <- mcmc_intervals_data(m.no.dom)
+
+param.m$model <- "full model"
+param.m.no.exp$model <- "no exp.se"
+param.m.no.dom$model <- "no dom"
+
+combined.estimates <- rbind(param.m, param.m.no.exp, param.m.no.dom) %>% 
+  filter(parameter %in% c("b_exp.se.scaled", 
+                          "b_dom.os.L", "b_dom.os.Q", "b_dom.os.C", "b_dom.os.E4", 
+                          "b_dom.db.L", "b_dom.db.Q", "b_dom.db.C"))
+
+position.offset <- position_nudge(
+  y = ifelse(
+    combined.estimates$model == "full model",
+    -0.1,
+    ifelse(combined.estimates$model == "no dom", 0.1, 0)))
+
+ggplot(data = combined.estimates,
+       mapping = aes(x = m, y = parameter, color = model)) +
+  geom_linerange(aes(xmin = l, xmax = h), position = position.offset, linewidth = 2) +
+  geom_linerange(aes(xmin = ll, xmax = hh), position = position.offset) +
+  geom_point(position = position.offset, color="black") + 
+  geom_vline(xintercept = 0, linetype="dashed")
+```
+
+It becomes apparent that none of the variables are conditionally independent of each other: learning either variable does not diminish the information gained from the other variables. Consequently, we assume all three causal assumptions being correct.
+
+#### Requirements Quality and Missing Entities
+
+According to our DAG, we assume that $rq \rightarrow missing.associations$, $rq \rightarrow missing.entities$, and $missing.associations \rightarrow missing.associations$. We test whether the first and/or last hypothesis are true by comparing the selected model with other candidates where one of the two factors is missing. 
+
+```{r comparison-formula-2}
+f.no.rq <- associations.missing | trials(associations.expected) ~ 1 + 
+  (1|PID) + 
+  period +
+  entities.missing +
+  rel.duration + 
+  exp.se.scaled + exp.re.scaled + edu + primary.role + 
+  model.train + model.occ +
+  dom.os + dom.db
+
+f.no.me <- associations.missing | trials(associations.expected) ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  rel.duration + 
+  exp.se.scaled + exp.re.scaled + edu + primary.role + 
+  model.train + model.occ +
+  dom.os + dom.db
+```
+
+```{r model-skew-comp-2}
+m.no.rq <-
+  brm(data = d, family = binomial, f.no.rq, prior = c(
+      prior(normal(-0.9, 0.1), class=Intercept),
+      prior(normal(0, 0.1), class=b),
+      prior(weibull(2, 0.5), class=sd)
+    ),
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, 
+  )
+
+m.no.me <-
+  brm(data = d, family = binomial, f.no.me, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4
+  )
+```
+
+We compare the predictors of interest ($\beta_{exp.se\_scaled}$ and $\beta_{dom.os}$) to see whether the estimates change when including either of the variables.
+
+```{r conditional-independencies-2}
+param.m <- mcmc_intervals_data(m)
+param.m.no.rq <- mcmc_intervals_data(m.no.rq)
+param.m.no.me <- mcmc_intervals_data(m.no.me)
+
+param.m$model <- "full model"
+param.m.no.rq$model <- "no requirements quality"
+param.m.no.me$model <- "no missing entity"
+
+combined.estimates <- rbind(param.m, param.m.no.rq, param.m.no.me) %>% 
+  filter(parameter %in% c("b_RQ1", "b_RQ2", "b_RQ3", "b_entities.missing"))
+
+position.offset <- position_nudge(
+  y = ifelse(
+    combined.estimates$model == "full model",
+    -0.1,
+    ifelse(combined.estimates$model == "no dom", 0.1, 0)))
+
+ggplot(data = combined.estimates,
+       mapping = aes(x = m, y = parameter, color = model)) +
+  geom_linerange(aes(xmin = l, xmax = h), position = position.offset, linewidth = 2) +
+  geom_linerange(aes(xmin = ll, xmax = hh), position = position.offset) +
+  geom_point(position = position.offset, color="black") + 
+  geom_vline(xintercept = 0, linetype="dashed")
+```
+
+The parameter estimations in the full model move more towards the center but none of their influences is completely diminished, meaning that it none of the variables are conditionally independent from one another.
+
+### Model selection
+
 We visualize the summary of updated posterior distributions - which does not yet answer the initial question, but indicates the direction and strength that each predictor has on the response variable.
 
 ```{r model-summary}
@@ -148,7 +327,7 @@ The marginal effect of the number of missing entities (`entities.missing`) shows
 conditional_effects(m, effects="entities.missing")
 ```
 
-The marginal effect of the relative duration shows the longer time a participant took, the less associations were missed. Time pressure remains an important factor for domain model completeness.
+The marginal effect of the relative duration shows no effect of duration on number of missing associations.
 
 ```{r marginal-duration}
 conditional_effects(m, effects="rel.duration")
@@ -160,9 +339,4 @@ Next, we visualize the interaction effect between the period variable (i.e., the
 conditional_effects(m, effects=c("period", "period:RQ"))
 ```
 
-The period has a notably decreasing impact, hinting at a learning effect that is factored out of the other variables by including the period variable. The interaction shows several effects:
-
-1. The later in the experiment a subject applies either no quality defect (`RQ=0`) or pure passive voice (`RQ=1`), the smaller the impact of the period on the response variable is.
-2. The later in the experiment a subject applies ambiguous pronouns (`RQ=2` and `RQ=3`), the stronger the impact of the period on the response variable is.
-
-This hints at the fact that subjects get used to passive voice, i.e., passive voice has less impact the more often it is encountered, but ambiguous pronouns increasingly risk missing more associations.
+The period has a notably decreasing impact, hinting at a learning effect that is factored out of the other variables by including the period variable. The interaction shows that there is no carryover effect.

@@ -353,7 +353,7 @@ d <- d %>%
     entities.superfluous = Superfluous.entity,
     associations.expected = ExpectedAssociations,
     associations.found = ExpectedAssociations - Missing.association,
-    associations.missing = Missing.association + Miswired.association,
+    associations.missing = Missing.association,
     associations.superfluous = Superfluous.association,
     associations.wrong = Miswired.association
   )

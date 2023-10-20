@@ -37,7 +37,6 @@ We draw a Directed Acyclic Graph (DAG) to make our causal assumptions explicit.
 ```{r dag}
 dag <- dagify(
   dur ~ rq + edu + exp + dom + task + tool,
-  task ~ exp,
   dom ~ exp,
   exposure = "rq",
   outcome = "dur",
@@ -235,13 +234,13 @@ position.offset <- position_nudge(
 
 ggplot(data = combined.estimates,
        mapping = aes(x = m, y = parameter, color = model)) +
-  geom_linerange(aes(xmin = l, xmax = h), position = position.offset, size = 2) +
+  geom_linerange(aes(xmin = l, xmax = h), position = position.offset, linewidth = 2) +
   geom_linerange(aes(xmin = ll, xmax = hh), position = position.offset) +
   geom_point(position = position.offset, color="black") + 
   geom_vline(xintercept = 0, linetype="dashed")
 ```
 
-It becomes apparent that none of the variables are independent of each other: learning either variable does not diminish the information gained from the other variables. Consequently, we assume all three causal assumptions being correct.
+It becomes apparent that none of the variables are conditionally independent of each other: learning either variable does not diminish the information gained from the other variables. Consequently, we assume all three causal assumptions being correct.
 
 ### Model selection
 

@@ -32,6 +32,7 @@ We draw a Directed Acyclic Graph (DAG) to make our causal assumptions explicit.
 ```{r dag}
 dag <- dagify(
   me ~ rq + dur + edu + exp + dom + task + tool,
+  dom ~ exp,
   exposure = "rq",
   outcome = "me",
   labels = c(me = "missing.entities", dur = "duration",
@@ -39,8 +40,8 @@ dag <- dagify(
              edu = "education", exp="experience",
              dom = "domain.knowledge", task = "task.experience",
              tool = "tool.experience"),
-  coords = list(x=c(rq=1, me=2, dur=1.5, edu=1, exp=1, dom=1, task=1, tool=1),
-                y=c(rq=-1, me=-1.5, dur=0, edu=-2, exp=-2.5, dom=-3, task=-3.5, tool=-4))
+  coords = list(x=c(rq=1, me=2, dur=1.5, edu=1, exp=1, dom=1.2, task=1, tool=1),
+                y=c(rq=-1, me=-1.5, dur=0, edu=-2, exp=-3.5, dom=-4, task=-2.5, tool=-3))
 )
 
 ggdag_status(dag, 
@@ -49,6 +50,8 @@ ggdag_status(dag,
   guides(fill = "none", color = "none") + 
   theme_dag()
 ```
+
+We do not assume a relationship between *requirements quality* and *duration* as we have already disproven this relationship in the [duration](./duration.Rmd) analysis.
 
 ### Formula Definition and Prior Selection
 
@@ -135,6 +138,75 @@ brms::pp_check(m, type="bars", ndraws=ndraws)
 The distribution of draws still encompasses the actually obsered data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data.
 
 Because we only trained one model, there is no need to select the best performing model using leave-one-out comparison `loo_compare`.
+
+### Comparison regarding conditional Independencies
+
+We test for conditional independencies. According to our DAG, we assume that $exp.se \rightarrow missing.entities$, $exp.se \rightarrow dom$, and $dom \rightarrow missing.entities$. We test whether the first and/or last hypothesis are true by comparing the selected model with other candidates where one of the two factors is missing. 
+
+```{r comparison-formula}
+f.no.exp <- entities.missing | trials(entities.expected) ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  rel.duration + 
+  exp.re.scaled + edu + primary.role +
+  dom.os + dom.db + 
+  model.train + model.occ
+
+f.no.dom <- entities.missing | trials(entities.expected) ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  rel.duration + 
+  exp.se.scaled + exp.re.scaled + edu + primary.role +
+  model.train + model.occ
+```
+
+```{r model-skew-comp}
+m.no.exp <-
+  brm(data = d, family = binomial, f.no.exp, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, 
+  )
+
+m.no.dom <-
+  brm(data = d, family = binomial, f.no.dom, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4
+  )
+```
+
+We compare the predictors of interest ($\beta_{exp.se\_scaled}$ and $\beta_{dom.os}$) to see whether the estimates change when including either of the variables.
+
+```{r conditional-independencies}
+param.m <- mcmc_intervals_data(m)
+param.m.no.exp <- mcmc_intervals_data(m.no.exp)
+param.m.no.dom <- mcmc_intervals_data(m.no.dom)
+
+param.m$model <- "full model"
+param.m.no.exp$model <- "no exp.se"
+param.m.no.dom$model <- "no dom"
+
+combined.estimates <- rbind(param.m, param.m.no.exp, param.m.no.dom) %>% 
+  filter(parameter %in% c("b_exp.se.scaled", 
+                          "b_dom.os.L", "b_dom.os.Q", "b_dom.os.C", "b_dom.os.E4", 
+                          "b_dom.db.L", "b_dom.db.Q", "b_dom.db.C"))
+
+position.offset <- position_nudge(
+  y = ifelse(
+    combined.estimates$model == "full model",
+    -0.1,
+    ifelse(combined.estimates$model == "no dom", 0.1, 0)))
+
+ggplot(data = combined.estimates,
+       mapping = aes(x = m, y = parameter, color = model)) +
+  geom_linerange(aes(xmin = l, xmax = h), position = position.offset, linewidth = 2) +
+  geom_linerange(aes(xmin = ll, xmax = hh), position = position.offset) +
+  geom_point(position = position.offset, color="black") + 
+  geom_vline(xintercept = 0, linetype="dashed")
+```
+
+It becomes apparent that none of the variables are conditionally independent of each other: learning either variable does not diminish the information gained from the other variables. Consequently, we assume all three causal assumptions being correct.
+
+### Model selection
 
 We visualize the summary of updated posterior distributions - which does not yet answer the initial question, but indicates the direction and strength that each predictor has on the response variable.
 
