@@ -20,6 +20,7 @@ This document contains the investigation of the impact of **requirements quality
 source("../util/data-preprocessing.R")
 d <- load.data()
 
+# number of draws for prior and posterior predictive checks
 ndraws <- 100
 ```
 
@@ -83,19 +84,27 @@ formula <- entities.superfluous ~ 1 +
   exp.se.scaled + exp.re.scaled + edu + primary.role + 
   dom.db + dom.os +
   model.train + model.occ
-
-#get_prior(formula, data=d, family=zero_inflated_poisson)
 ```
 
-We select uninformative priors for the predictors in the formula:
+The response variable is a count of superfluous entities, which does not have an upper bound. The number of superfluous entities is a candidate for a Poisson distribution. We check the eligibility of that distribution by calculating its dispersion.
 
-```{r priors-zip}
-priors.zip <- c(
-  prior(normal(0, 1), class=Intercept),
-  prior(normal(0, 0.3), class=b),
-  prior(weibull(2, 1.5), class=sd),
-  prior(beta(2, 4), class=zi)
-)
+```{r dispersion}
+mean <- mean(d$entities.superfluous)
+stdev <- sd(d$entities.superfluous)
+index.of.dispersion <- (stdev^2)/mean
+```
+
+The index of dispersion is around 1.5, which suggests that the variable is overdispersed. Because of this, a Poisson distribution is not eligible and we need to use a negative binomial distribution.
+
+With the appropriate distribution selected, we determine uninformative priors for the predictors in the formula:
+
+```{r priors-nb}
+priors.nb <- c(
+    prior(normal(0, 1), class=Intercept),
+    prior(normal(0, 0.2), class=b),
+    prior(weibull(2, 1.5), class=sd),
+    prior(gamma(2, 2), class=shape)
+  )
 ```
 
 ```{r priors-zinb}
@@ -108,15 +117,14 @@ priors.zinb <- c(
   )
 ```
 
-
 #### Prior Predictive Checks
 
-```{r model-priors-zip}
-m.prior.zip <-
-  brm(data = d, family = zero_inflated_poisson, formula, prior = priors.zip,
+```{r model-priors-nb}
+m.prior.nb <-
+  brm(data = d, family = negbinomial, formula, prior = priors.nb,
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
     seed = 4, sample_prior="only",
-    file = "fits/superfluous.entities.zip.prior"
+    file = "fits/superfluous.entities.nb.prior"
   )
 ```
 
@@ -130,23 +138,22 @@ m.prior.zinb <-
 ```
 
 ```{r prior-predictive-check}
-
-priorpc.zip <- brms::pp_check(m.prior.zip, ndraws=ndraws, type="bars")
+priorpc.nb <- brms::pp_check(m.prior.nb, ndraws=ndraws, type="bars")
 priorpc.zinb <- brms::pp_check(m.prior.zinb, ndraws=ndraws, type="bars")
 
-priorpc.zip / priorpc.zinb
+priorpc.nb / priorpc.zinb
 ```
 
 ### Model Training
 
 Now, we execute the estimation step by updating the prior distributions based on the observed data `d`.
 
-```{r model-zip}
-m.zip <-
-  brm(data = d, family = zero_inflated_poisson, formula, prior = priors.zip,
+```{r model-nb}
+m.nb <-
+  brm(data = d, family = negbinomial, formula, prior = priors.nb,
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
     seed = 4, 
-    file = "fits/superfluous.entities.zip"
+    file = "fits/superfluous.entities.nb"
   )
 ```
 
@@ -162,10 +169,10 @@ m.zinb <-
 We perform a posterior predictive check to ensure that the model has learned properly.
 
 ```{r posterior-predictive-check}
-postpc.zip <- brms::pp_check(m.zip, ndraws=ndraws, type="bars")
+postpc.nb <- brms::pp_check(m.nb, ndraws=ndraws, type="bars")
 postpc.zinb <- brms::pp_check(m.zinb, ndraws=ndraws, type="bars")
 
-postpc.zip / postpc.zinb
+postpc.nb / postpc.zinb
 ```
 
 The distribution of draws is not yet close enough to the real data.
@@ -175,13 +182,13 @@ The distribution of draws is not yet close enough to the real data.
 We compare the predictive capability of the two models using the leave-one-out comparison.
 
 ```{r loo-compare}
-m.zip <- add_criterion(m.zip, criterion = "loo")
+m.nb <- add_criterion(m.nb, criterion = "loo")
 m.zinb <- add_criterion(m.zinb, criterion = "loo")
 
-loo_compare(m.zip, m.zinb)
+loo_compare(m.nb, m.zinb)
 ```
 
-According to loo-compare, there is no significant difference in the predictive power of the two models. We can select and proceed either of the two models.
+The zero-inflation does not add to the predictive power of the model.
 
 ### Comparison regarding conditional Independencies
 
@@ -206,13 +213,13 @@ f.no.dom <- entities.superfluous ~ 1 +
 
 ```{r model-skew-comp}
 m.no.exp <-
-  brm(data = d, family = zero_inflated_poisson, f.no.exp, prior = priors.zip,
+  brm(data = d, family = negbinomial, f.no.exp, prior = priors.nb,
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
     seed = 4, 
   )
 
 m.no.dom <-
-  brm(data = d, family = zero_inflated_poisson, f.no.dom, prior = priors.zip,
+  brm(data = d, family = negbinomial, f.no.dom, prior = priors.nb,
     iter = 4000, warmup = 1000, chains = 4, cores = 4,
     seed = 4
   )
@@ -221,7 +228,7 @@ m.no.dom <-
 We compare the predictors of interest ($\beta_{exp.se\_scaled}$ and $\beta_{dom.os}$) to see whether the estimates change when including either of the variables.
 
 ```{r conditional-independencies}
-param.m <- mcmc_intervals_data(m.zip)
+param.m <- mcmc_intervals_data(m.nb)
 param.m.no.exp <- mcmc_intervals_data(m.no.exp)
 param.m.no.dom <- mcmc_intervals_data(m.no.dom)
 
@@ -253,7 +260,7 @@ It becomes apparent that none of the variables are conditionally independent of 
 ### Model selection
 
 ```{r model-selection}
-m <- m.zip
+m <- m.nb
 ```
 
 ### Model Summary
