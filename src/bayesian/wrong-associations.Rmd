@@ -264,6 +264,12 @@ conditional_effects(m, effects="rel.duration")
 
 Time-pressure negatively affects the number of wrong associations. The less time a subject took for a domain model, the higher the likelihood of connecting associations wrongly.
 
+Additionally, we investigate the marginal effect of one of the more significant context factors, the existence of prior training in modeling. The graph shows that there is a slight difference, but the overlapping confidence intervals undermine the significance of the effect.
+
+```{r marginal-train}
+conditional_effects(m, effects="model.train")
+```
+
 Next, we investigate the interaction between domain knowledge and the treatment. The hypothesis is that domain knowledge (in this case: particularly domain knowledge about open science/source) mitigates the effect of the treatments.
 
 ```{r interaction-treatment-domainknowledge}
