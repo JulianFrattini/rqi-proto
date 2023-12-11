@@ -51,17 +51,16 @@ In order to run the `R` scripts in the src folder, ensure that you have [R](http
     devtools::install_github("stan-dev/cmdstanr")
     cmdstanr::install_cmdstan()
 ```
-4. Install all missing packages via `install.packages(c("tidyverse","ggdag","dagitty","patchwork","brms","marginaleffects","rcompanion","psych"))`
+4. Install all required packages via `install.packages(c("tidyverse", "xlsx", "stringr", "rcompanion", "psych", "dagitty", "ggdag", "brms", "tidyverse", "posterior", "bayesplot", "marginaleffects", "broom.mixed", "patchwork"))` (see [setup.R](./src/util/setup.R) for the setup of the main libraries).
 5. Create a folder called *fits* within *src/bayesian/* such that `brms` has a location to place all Bayesian models.
 6. Open the `rqi-proto.Rproj` file with RStudio, which will setup the environment correctly.
 
 ## References
 
 [1] Frattini, J., Montgomery, L., Fischbach, J., Mendez, D., Fucci, D., & Unterkalmsteiner, M. (2023). Requirements quality research: a harmonized theory, evaluation, and roadmap. Requirements Engineering, 1-14.
+
 [2] Femmer, H., Kučera, J., & Vetrò, A. (2014, September). On the impact of passive voice requirements on domain modelling. In Proceedings of the 8th ACM/IEEE international symposium on empirical software engineering and measurement (pp. 1-4).
 
 ## License
 
-Copyright © 2023 Julian Frattini
-
-This work (source code) is licensed under [MIT License](./LICENSE).
+Copyright © 2023 Julian Frattini. This work (source code) is licensed under [MIT License](./LICENSE).
