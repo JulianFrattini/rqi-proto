@@ -39,7 +39,21 @@ This repository contains the following files:
     
 ## System Requirements
 
-To render and edit `graphml` files, intall a graph editor like [yEd](https://www.yworks.com/products/yed).
+To render and edit `graphml` files, install a graph editor like [yEd](https://www.yworks.com/products/yed).
+
+In order to run the `R` scripts in the src folder, ensure that you have [R](https://ftp.acc.umu.se/mirror/CRAN/) (version > 4.0) and (RStudio)[https://posit.co/download/rstudio-desktop/#download] installed on your machine. Then, ensure the following steps:
+
+1. Install the `rstan` toolchain by following the instructions for [Windows](https://github.com/stan-dev/rstan/wiki/Configuring-C---Toolchain-for-Windows#r40), [Mac OS](https://github.com/stan-dev/rstan/wiki/Configuring-C---Toolchain-for-Mac), or [Linux](https://github.com/stan-dev/rstan/wiki/Configuring-C-Toolchain-for-Linux) respectively.
+2. Restart RStudio and follow the instructions starting with the [Installation of RStan](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started#installation-of-rstan)
+3. Install the latest version of `stan` by running the following commands
+```
+    install.package("devtools")
+    devtools::install_github("stan-dev/cmdstanr")
+    cmdstanr::install_cmdstan()
+```
+4. Install all missing packages via `install.packages(c("tidyverse","ggdag","dagitty","patchwork","brms","marginaleffects","rcompanion","psych"))`
+5. Create a folder called *fits* within *src/bayesian/* such that `brms` has a location to place all Bayesian models.
+6. Open the `rqi-proto.Rproj` file with RStudio, which will setup the environment correctly.
 
 ## References
 
