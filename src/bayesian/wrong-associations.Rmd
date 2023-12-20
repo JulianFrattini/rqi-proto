@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 source("../util/setup.R")
 source("../util/model-eval.R")
+
+path_figures <- "../../figures/"
 ```
 
 This document contains the investigation of the impact of **requirements quality** on the number of **wrong associations** in the process of domain modeling. A wrong association is an association where one of the connected nodes should actually not be involved while a third, not connected node, should be.
@@ -119,7 +121,8 @@ With the samples from the prior distributions, we conduct a prior predictive che
 
 ```{r prior-predictive-check}
 ndraws <- 100
-brms::pp_check(m.prior, ndraws=ndraws, type="bars")
+priorpc <- brms::pp_check(m.prior, ndraws=ndraws, type="bars")
+priorpc
 ```
 
 The distribution of draws encompasses the actually observed data, meaning that the actual observations lie within the realm of belief defined by the priors. We accept our priors as feasible.
@@ -140,10 +143,44 @@ m <-
 We perform a posterior predictive check to ensure that the model has learned properly.
 
 ```{r posterior-predictive-check}
-brms::pp_check(m, type="bars", ndraws=ndraws)
+postpc <- brms::pp_check(m, type="bars", ndraws=ndraws)
+postpc
 ```
 
-The distribution of draws still encompasses the actually observed data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data.
+The distribution of draws still encompasses the actually observed data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data. The following plot shows both prior and posterior predictions and compares their distribution against the actually observed data.
+
+```{r vis-predictions}
+# obtain the distribution of the prior predictions
+d.priorpc <- priorpc$plot_env$yrep_data %>%
+  rename(all_of(c(lo = "lo", est = "mid", hi = "hi"))) %>% 
+  mutate(type = "Prior")
+
+# obtain the distribution of the posterior predictions
+d.postpc <- postpc$plot_env$yrep_data %>% 
+  rename(all_of(c(lo = "lo", est = "mid", hi = "hi"))) %>% 
+  mutate(type = "Posterior")
+
+# combine the two data frames
+d.predictions <- rbind(d.priorpc, d.postpc)
+
+# obtain the actually observed distribution
+d.actual <- d %>%
+  group_by(associations.wrong) %>%
+  summarize(actual = n()) %>%
+  rename(x = "associations.wrong")
+
+# plot both the actually observed data as well as the prior and posterior distribution
+ggplot() + 
+  geom_bar(data=d.actual, aes(x=x, y=actual), stat="identity") +
+  geom_errorbar(data=d.predictions, aes(x=ifelse(type=="Prior", x-0.2, x+0.2), ymin = lo, ymax = hi, color=type), width=0.3) +
+  geom_point(data=d.predictions, aes(x=ifelse(type=="Prior", x-0.2, x+0.2), y=est, color=type), size=3) +
+  labs(x = "Number of wrong associations", y = "Occurrences", color = "Predictions") +
+  guides(color = guide_legend(reverse=T))
+```
+
+```{r vis-predictions-save}
+ggsave(filename=file.path(path_figures, "results/wrong-associations-predictive-checks.pdf"), width=7, height=5)
+```
 
 Because we only trained one model, there is no need to select the best performing model using leave-one-out comparison `loo_compare`.
 
