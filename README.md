@@ -22,11 +22,11 @@ This repository contains the following files:
   * rqi-data.csv: data sheet aggregated from the individual data files (demographics, objects, and results) via [data-loading](./src/util/data-loading.Rmd)
 * doc: folder containing all supplementary material for the planning and execution of the experiment
   * instrument: folder containing the experiment instrument
-    * Study Document.pdf: instructions for the experimental task
-    * Survey.pdf: additional survey for demographic variables of study participants
-  * Causal Model.pdf: fundamental causal assumptions informing the design of the experiment
-  * Experiment Design.pdf: documentation of the experimental design
-  * Experimental Objects.pdf: the requirements specifications for the experimental task as well as the ground truth
+    * study-document.pdf: instructions for the experimental task
+    * survey.pdf: additional survey for demographic variables of study participants
+  * causal-model.pdf: fundamental causal assumptions informing the design of the experiment
+  * experiment-design.pdf: documentation of the experimental design
+  * experimental-objects.pdf: the requirements specifications for the experimental task as well as the ground truth
 * figures: folder containing all figures of the manuscript (in `pdf` format) which are either generated via the scripts or from `graphml` files
   * dags: all directed, acyclic graphs
   * demographics: visualization of the distribution of demographic variables
@@ -70,11 +70,11 @@ In order to run the `R` scripts in the src folder, ensure that you have [R](http
 
 ## Application
 
-To use this replication package, we recommend investigating the artifacts in this repository in the following order. For each script, you can choose between the interactive `Rmd` file that allows to inspect and manipulate each variable and the `html` file, which is a pre-compiled version of each `Rmd` notebook located in the [html](./src/html) folder.
+To use this replication package, we recommend investigating the artifacts in this repository in the following order. For each script, you can choose between the *interactive* `Rmd` file that allows to inspect and manipulate each variable and the *static* `html` file, which is a pre-compiled version of each `Rmd` notebook located in the [html](./src/html) folder.
 
-1. **Assumptions**: To understand the general causal assumptions that informed the design of the study, consider the [causal assumptions](./doc/Causal Model.pdf)
-2. **Design**: To review the design derived from this causal model, consider the [experiment design](./doc/Experiment Design.pdf) and the [experimental objects](./doc/Experimental Objects.pdf).
-3. **Instrumentation**: The implementation of the experiment design consists of the [experiment task](./doc/instrument/Study Document.pdf) and the [survey](./doc/instrument/Survey.pdf) of demographic variables.
+1. **Assumptions**: To understand the general causal assumptions that informed the design of the study, consider the [causal assumptions](./doc/causal-model.pdf)
+2. **Design**: To review the design derived from this causal model, consider the [experiment design](./doc/experiment-design.pdf) and the [experimental objects](./doc/experimental-objects.pdf).
+3. **Instrumentation**: The implementation of the experiment design consists of the [experiment task](./doc/instrument/study-document.pdf) and the [survey](./doc/instrument/survey.pdf) of demographic variables.
 4. **Data**: To inspect the collected data, consider the data preparation notebook ([static](./src/html/data-loading.html)/[interactive](./src/util/data-loading.Rmd)) or the [raw data](./data/raw). Also, consider the calculation of the inter-rater agreement ([static](./src/html/interrater-agreement.html)/[interactive](./src/meta/interrater-agreement.Rmd)) to check the reliability of the data labeling.
 5. **Frequentist Analysis**: Check the frequentist data analysis ([static](./src/html/frequentist-analysis.html)/[interactive](./src/frequentist/frequentist-analysis.Rmd)) to review the application of null-hypothesis significance tests as proposed by Femmer et al. [2].
 6. **Bayesian Analysis**: Check the Bayesian data analyses (static files in [src/html](./src/html) named after the five response variables (e.g., [duration.html](./src/html/duration.html) or [wrong-associations.html](./src/html/wrong-associations.html)), interactive files in [src/bayesian](./src/bayesian)) to review the application of a Bayesian data analysis framework for statistical causal inference [3].
