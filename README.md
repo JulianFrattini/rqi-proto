@@ -34,6 +34,7 @@ This repository contains the following files:
     * superfluous-entities.Rmd: "Requirements quality has an effect on the number of superfluous entities in a domain model"
     * wrong-associations.Rmd: "Requirements quality has an effect on the number of wrong associations in a domain model"
   * frequentist: Frequentist analysis of the data (investigating the hypotheses by Femmer et al. [2])
+  * html: folder containing a pre-compiled `html` version of each `Rmd` file (using `knitr`)
   * meta: meta-analyses assessing the validity of the research
     * interrater-agreement.Rmd: calculation of the inter-rater agreement of two evaluators between rqi-results.csv and rqi-results-overlap.csv
   * util: helper files for the data analysis
