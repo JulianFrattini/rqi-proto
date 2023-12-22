@@ -40,7 +40,7 @@ treatments <- 1:3
 response.variables <- c("duration.scaled", "entities.missing", "entities.superfluous", "associations.missing", "associations.wrong")
 ```
 
-The results will be stored in a data frame of the following structure:
+The results will be stored in a data frame of the following structure (which is explained in the results section below):
 
 ```{r dataframe}
 fda <- data.frame(
@@ -70,6 +70,7 @@ for (outcome in response.variables) {
     swtest.baseline <- shapiro.test(d.paired$baseline)
     swtest.treatment <- shapiro.test(d.paired$treatment)
 
+    # depending on the result of the Shapiro-Wilk test for normal distribution, either perform a Wilcoxon test or a t-test
     if(swtest.baseline$p.value < alpha || swtest.treatment$p.value < alpha) {
       hypothesis.test <- wilcox.test(x=d.paired$baseline, y=d.paired$treatment, conf.int=TRUE, paired=TRUE)
       effect.size <- wilcoxonPairedRC(x=d.long[[outcome]], g=d.long$treatment, ci=TRUE)
@@ -107,7 +108,20 @@ for (outcome in response.variables) {
 }
 ```
 
-Finally, we visualize the results.
+## Results
+
+Finally, we print the results of the frequentist analyses. The table contains the following columns:
+
+1. outcome: The response variable, i.e., the dependent variable on which an impact is hypothesized
+2. factor: The independent variable, i.e., the level of the requirements quality defect (1=passive voice, 2=ambiguous pronoun, 3=both) compared to the baseline of no quality defect
+3. normal: `TRUE` if the two compared distributions are normal according to the Shapiro-Wilk test
+4. p: p-value of the null-hypothesis significance test (NHST)
+5. reject: `TRUE` if the NHST suggests to reject the null-hypothesis 
+6. ci.lower: lower bound of the confidence interval of the p-value
+7. ci.upper: upper bound of the confidence interval of the p-value
+8. effect.size: effect size as calculated via the appropriate metric
+9. effect.size.ci.lower: lower bound of the confidence interval of the effect size
+10. effect.size.ci.upper: upper bound of the confidence interval of the effect size
 
 ```{r result}
 knitr::kable(fda, "simple")
