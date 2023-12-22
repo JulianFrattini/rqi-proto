@@ -360,39 +360,6 @@ d <- d %>%
   )
 ```
 
-### Relative dependent variables
-
-The experiment employs a crossover design, i.e., all four treatments (baseline + 3 quality defect combinations) are applied to every subject. This allows to factor out between-subject variability by making all dependent variables *relative to each subject's mean* instead of relative to the overall mean.
-
-First, determine the mean of the relevant dependent variables.
-
-```{r calculate-averages}
-averages <- d %>% 
-  group_by(PID) %>% 
-  summarize(
-    avg.duration = mean(Duration),
-    avg.entity.missing = mean(entities.missing),
-    avg.entity.super = mean(entities.superfluous),
-    avg.association.missing = mean(associations.missing),
-    avg.association.wrong = mean(associations.wrong)
-    )
-```
-
-Then, add this information to each row (i.e., that every observation is also associated with the mean observation *of its subject*) and calculate the relative values by subtracting the mean.
-
-```{r relative-scale}
-d <- d %>% 
-  full_join(averages)
-
-d <- d %>% mutate(
-  rel.duration = Duration - avg.duration,
-  rel.entity.miss = entities.missing - avg.entity.missing,
-  rel.entity.super = entities.superfluous - avg.entity.super,
-  rel.association.miss = associations.missing - avg.association.missing,
-  rel.association.wrong = associations.wrong - avg.association.wrong
-)
-```
-
 
 ### Filtering
 
@@ -413,9 +380,7 @@ d.rel <- d %>%
     
     entities.expected, entities.found, entities.missing, entities.superfluous, 
     associations.expected, associations.found, associations.missing, associations.superfluous, associations.wrong,
-    duration.scaled,
-    
-    rel.duration, rel.entity.miss, rel.entity.super, rel.association.miss, rel.association.wrong)
+    duration.scaled)
 
 str(d.rel)
 ```

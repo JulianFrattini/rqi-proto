@@ -467,31 +467,6 @@ participants &lt;- participants %&gt;%
     associations.wrong = Miswired.association
   )</code></pre>
 </div>
-<div id="relative-dependent-variables" class="section level3">
-<h3>Relative dependent variables</h3>
-<p>The experiment employs a crossover design, i.e., all four treatments (baseline + 3 quality defect combinations) are applied to every subject. This allows to factor out between-subject variability by making all dependent variables <em>relative to each subject’s mean</em> instead of relative to the overall mean.</p>
-<p>First, determine the mean of the relevant dependent variables.</p>
-<pre class="r"><code>averages &lt;- d %&gt;% 
-  group_by(PID) %&gt;% 
-  summarize(
-    avg.duration = mean(Duration),
-    avg.entity.missing = mean(entities.missing),
-    avg.entity.super = mean(entities.superfluous),
-    avg.association.missing = mean(associations.missing),
-    avg.association.wrong = mean(associations.wrong)
-    )</code></pre>
-<p>Then, add this information to each row (i.e., that every observation is also associated with the mean observation <em>of its subject</em>) and calculate the relative values by subtracting the mean.</p>
-<pre class="r"><code>d &lt;- d %&gt;% 
-  full_join(averages)</code></pre>
-<pre><code>## Joining with `by = join_by(PID)`</code></pre>
-<pre class="r"><code>d &lt;- d %&gt;% mutate(
-  rel.duration = Duration - avg.duration,
-  rel.entity.miss = entities.missing - avg.entity.missing,
-  rel.entity.super = entities.superfluous - avg.entity.super,
-  rel.association.miss = associations.missing - avg.association.missing,
-  rel.association.wrong = associations.wrong - avg.association.wrong
-)</code></pre>
-</div>
 <div id="filtering" class="section level3">
 <h3>Filtering</h3>
 <p>Filter the data frame to only contain relevant columns.</p>
@@ -509,12 +484,10 @@ participants &lt;- participants %&gt;%
     
     entities.expected, entities.found, entities.missing, entities.superfluous, 
     associations.expected, associations.found, associations.missing, associations.superfluous, associations.wrong,
-    duration.scaled,
-    
-    rel.duration, rel.entity.miss, rel.entity.super, rel.association.miss, rel.association.wrong)
+    duration.scaled)
 
 str(d.rel)</code></pre>
-<pre><code>## &#39;data.frame&#39;:    100 obs. of  30 variables:
+<pre><code>## &#39;data.frame&#39;:    100 obs. of  25 variables:
 ##  $ PID                     : num  2 2 2 2 3 3 3 3 4 4 ...
 ##  $ RID                     : num  1 2 4 3 1 3 2 4 1 3 ...
 ##  $ RQ                      : Factor w/ 4 levels &quot;0&quot;,&quot;1&quot;,&quot;2&quot;,&quot;3&quot;: 1 2 4 3 1 3 2 4 1 3 ...
@@ -539,12 +512,7 @@ str(d.rel)</code></pre>
 ##  $ associations.missing    : num  0 1 3 1 0 0 0 1 4 1 ...
 ##  $ associations.superfluous: num  0 1 0 0 1 0 1 0 1 1 ...
 ##  $ associations.wrong      : num  0 0 1 1 0 2 0 0 0 1 ...
-##  $ duration.scaled         : num  -0.0545 -0.3416 1.0937 -0.3416 -0.6287 ...
-##  $ rel.duration            : num  -0.5 -1.5 3.5 -1.5 -2.75 -2.75 5.25 0.25 -1.5 11.5 ...
-##  $ rel.entity.miss         : num  -0.75 0.25 0.25 0.25 -0.75 0.25 0.25 0.25 0.75 -0.25 ...
-##  $ rel.entity.super        : num  0.5 -0.5 0.5 -0.5 0.5 -0.5 0.5 -0.5 0.25 1.25 ...
-##  $ rel.association.miss    : num  -1.25 -0.25 1.75 -0.25 -0.25 -0.25 -0.25 0.75 2.25 -0.75 ...
-##  $ rel.association.wrong   : num  -0.5 -0.5 0.5 0.5 -0.5 1.5 -0.5 -0.5 -0.75 0.25 ...</code></pre>
+##  $ duration.scaled         : num  -0.0545 -0.3416 1.0937 -0.3416 -0.6287 ...</code></pre>
 </div>
 </div>
 <div id="data-export" class="section level2">
