@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r paths}
 path_data <- "../../data"
+path_data_raw <- paste(path_data, "/raw", sep="")
 path_figures <- "../../figures/demographics"
 ```
 
@@ -35,7 +36,7 @@ The data consists of three tables:
 The requirements data consists of a list of four requirements, each identified by its identifier `RID` and characterized by the treatment (the use of `PassiveVoice` and/or an `AmbiguousPronoun`).
 
 ```{r requirements}
-requirements <- read.csv(file=file.path(path_data, "rqi-objects.csv")) %>% 
+requirements <- read.csv(file=file.path(path_data_raw, "rqi-objects.csv")) %>% 
   mutate(
     PassiveVoice = (PassiveVoice==1),
     AmbiguousPronoun = (AmbiguousPronoun==1),
@@ -48,7 +49,7 @@ requirements <- read.csv(file=file.path(path_data, "rqi-objects.csv")) %>%
 Observations collected during the experiment. Every row represents the result of one participant processing one requirement, hence we expect $N \times 4$ observations
 
 ```{r observations}
-observations <- read.xlsx(file=file.path(path_data, "rqi-results.xlsx"), sheetName="Statistics") %>% 
+observations <- read.xlsx(file=file.path(path_data_raw, "rqi-results.xlsx"), sheetName="Statistics") %>% 
   mutate(
     PID = as.numeric(PID),
     Duration = as.numeric(Duration)
@@ -161,7 +162,7 @@ degrees <- c("High-School", "Bachelor's degree", "Master's degree", "Ph.D.")
 domain.knowledge <- 1:5
 occurrence <- c("None", "Rarely", "From time to time", "Often")
 
-demographics <- read.csv(file=file.path(path_data, "rqi-demographics.csv"))
+demographics <- read.csv(file=file.path(path_data_raw, "rqi-demographics.csv"))
 
 participants <- demographics %>% 
   mutate(

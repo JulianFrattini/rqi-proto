@@ -35,10 +35,10 @@ response.vars <- c("Missing.entity", "Too.coarse.entity", "Superfluous.entity", 
 First, load the data and cast relevant columns to their respective data type
 
 ```{r data-loading}
-r1 <- read.xlsx(file="../../data/rqi-results.xlsx", sheetName="Statistics") %>% 
+r1 <- read.xlsx(file="../../data/raw/rqi-results.xlsx", sheetName="Statistics") %>% 
   mutate(PID = as.numeric(PID))
 
-r2 <- read.xlsx(file="../../data/rqi-results-overlap.xlsx", sheetName="Statistics") %>% 
+r2 <- read.xlsx(file="../../data/raw/rqi-results-overlap.xlsx", sheetName="Statistics") %>% 
   mutate(PID = as.numeric(PID))
 ```
 

@@ -2,20 +2,24 @@
 
 [![GitHub](https://img.shields.io/github/license/JulianFrattini/rqi-proto)](./LICENSE)
 
-This repository contains the replication package for the prototype study that empirically investigates the impact of requirements quality defects. It is the first implementation of the requirements quality theory [1] with the goal of quantifying the impact that alleged requirements quality defects (like passive voice or ambiguous pronouns) have on subsequent software engineering activities (like domain modeling).
+This repository contains the replication package for the prototype study that empirically investigates the impact of requirements quality defects on subsequent activities. It is the first implementation of the requirements quality theory [1] with the goal of quantifying the impact that alleged requirements quality defects (like passive voice or ambiguous pronouns) have on subsequent software engineering activities (like domain modeling).
 
-The study comprises of an experiment in which experiment participants were tasked to generate one domain model for each of four single sentence natural language requirements specifications. Each specification contained different requirements quality defects (passive voice and ambiguous pronouns). The experiment is used to evaluate whether these alleged quality defects have an impact on the properties of the resulting domain model. The experiment is an external, differentiated replication of a study by Femmer et al. [2].
+The study comprises of an experiment in which participants were tasked to generate one domain model for each of four single sentence natural language requirements specifications. Each specification contained different requirements quality defects (passive voice and ambiguous pronouns). The experiment is used to evaluate whether these alleged quality defects have an impact on the properties of the resulting domain model. The experiment is an external, differentiated replication of a study by Femmer et al. [2].
 
 ## Structure
 
 This repository contains the following files:
 
 * data: folder containing all data obtained from the experiment
+  * raw: folder containing the raw data as collected during the experiment
+    * rqi-demographics.csv: anonymized demographic data about the experiment participants
+    * rqi-objects.csv: attributes of the four experimental objects (single-sentence requirements specifications)
+    * rqi-results.csv: evaluation of the domain models produced by the experiment participants
+    * rqi-results-overlap.csv: evaluation of a part of the domain models produced by the experiment participants, but by a different evaluator
+  * results: folder containing data produced during the evaluation
+    * rel-duration-superfluous-entities: estimate and confidence interval of the marginal effect of the relative duration on superfluous entities
+    * rel-duration-wrong-associations: estimate and confidence interval of the marginal effect of the relative duration on wrong associations
   * rqi-data.csv: data sheet aggregated from the individual data files (demographics, objects, and results) via [data-loading](./src/util/data-loading.Rmd)
-  * rqi-demographics.csv: anonymized demographic data about the experiment participants
-  * rqi-objects.csv: attributes of the four experimental objects (single-sentence requirements specifications)
-  * rqi-results.csv: evaluation of the domain models produced by the experiment participants
-  * rqi-results-overlap.csv: evaluation of a part of the domain models produced by the experiment participants, but by a different evaluator
 * figures: folder containing all figures of the manuscript (in `pdf` format) which are either generated via the scripts or from `graphml` files
   * dags: all directed, acyclic graphs
   * demographics: visualization of the distribution of demographic variables
