@@ -21,6 +21,7 @@ This repository contains the following files:
   * demographics: visualization of the distribution of demographic variables
   * examples: visualizations of domain models generated from requirements specifications
   * quality-theory: graphical representation of the requirements quality theory
+  * results: marginal and interaction plots evaluating the Bayesian models
 * src: R code processing the data
   * bayesian: Bayesian data analyses of the following hypotheses:
     * duration.Rmd: "Requirements quality has an effect on the duration to create a domain model"

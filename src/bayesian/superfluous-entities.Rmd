@@ -313,6 +313,14 @@ Visualizing the marginal effect of the relative duration shows that the longer a
 conditional_effects(m, effects="rel.duration")
 ```
 
+```{r marginal-duration-export, include=FALSE}
+conditional_effects(m, effects="rel.duration")$rel.duration %>% 
+  select(effect1__, lower__, estimate__, upper__) %>% 
+  rename(all_of(c(duration="effect1__", ci.lower="lower__", estimate="estimate__", ci.upper="upper__"))) %>% 
+  mutate(target="superfluous.entities") %>% 
+  write_csv(file = "../../data/results/rel-duration-superfluous-entities.csv")
+```
+
 The marginal effect of modeling occurance (i.e., how often a participant uses modeling techniques in their job) shows a slight effect of the middle frequencies. This hints at the fact that both (1) experienced modelers (`model.occ=often`) know what they are doing and (2) novel modelers (`model.occ=none`) paid closer attention to the task.
 
 ```{r marginal-effects-modeling}

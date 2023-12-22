@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 source("../util/setup.R")
 source("../util/model-eval.R")
+
+path_figures <- "../../figures/"
 ```
 
 This document contains the investigation of the impact of **requirements quality** on the number of **missing associations** in the process of domain modeling. An association is missing if it is contained in the gold standard (i.e., how the domain model *should* look like when derived correctly from a requirements specification) but not in the domain model delivered by an experiment participant.
@@ -324,8 +326,21 @@ conditional_effects(m, effects="dom.os")
 The marginal effect of the number of missing entities (`entities.missing`) shows the strong impact of missing entities on missing associations. Logically, an association must be either missing or wrong if at least one of its entities is missing. Including this predictor factors out this propagated effect.
 
 ```{r marginal-entities}
-conditional_effects(m, effects="entities.missing")
+conditional_effects(m, effects="entities.missing")$entities.missing %>% 
+  select(effect1__, lower__, estimate__, upper__) %>% 
+  filter(effect1__%%1==0) %>% 
+  ggplot(aes(x=effect1__)) + 
+    geom_point(aes(y=estimate__), size=2) +
+    geom_errorbar(aes(ymin=lower__, ymax=upper__), width=0.3) +
+    labs(x="Number of missing entities", y="Likelihood of missing an association") +
+    coord_flip() +
+    scale_x_reverse()
 ```
+
+```{r marginal-entities-save, include=FALSE}
+ggsave(filename=file.path(path_figures, "results/missing-entities-missing-associations.pdf"), width=7, height=3)
+```
+
 
 The marginal effect of the relative duration shows no effect of duration on number of missing associations.
 

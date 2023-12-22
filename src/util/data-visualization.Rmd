@@ -1,0 +1,50 @@
+---
+title: "Data Visualization"
+author: "Julian Frattini"
+date: '2023-12-21'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+
+path_data <- "../../data/results"
+path_figures <- "../../figures/results"
+```
+
+This document takes care of visualizations that span across multiple analyses.
+
+## Marginal Effect of the Relative Duration
+
+In this plot, we visualize the marginal effect of the relative duration on the two response variables *superfluous entities* and *wrong associations*.
+
+```{r data-loading}
+superfluous.associations <- read.csv(file=file.path(path_data, "rel-duration-superfluous-entities.csv"))
+wrong.associations <- read.csv(file=file.path(path_data, "rel-duration-wrong-associations.csv"))
+```
+
+```{r data-joining}
+d <- rbind(superfluous.associations, wrong.associations)
+```
+
+```{r data-visualization}
+d %>% 
+  filter(duration > -5 & duration < 5) %>% 
+  ggplot(aes(x=duration)) +
+  geom_line(aes(y=estimate, color=target)) +
+  geom_ribbon(aes(ymin=ci.lower, ymax=ci.upper, fill=target), alpha=0.2) +
+  geom_vline(aes(xintercept=0), color="grey") +
+  labs(
+    x="Relative duration in minutes (0 = mean duration of creating a domain model)", 
+    y="Average value of response variable", 
+    color="Response Variable") +
+  guides(fill="none") +
+  scale_color_discrete(labels=c("Superfluous entities", "Wrong associations"))
+```
+
+```{r vis-save, include=FALSE}
+ggsave(filename=file.path(path_figures, "rel-duration.pdf"), width=8, height=4)
+```
+

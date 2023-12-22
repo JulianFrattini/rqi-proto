@@ -178,7 +178,7 @@ ggplot() +
   guides(color = guide_legend(reverse=T))
 ```
 
-```{r vis-predictions-save}
+```{r vis-predictions-save, include=FALSE}
 ggsave(filename=file.path(path_figures, "results/wrong-associations-predictive-checks.pdf"), width=7, height=5)
 ```
 
@@ -293,27 +293,53 @@ conditional_effects(m, effects="RQ", method="posterior_epred")
 
 Additionally, we look at some marginal and interaction effects. Marginal effects represent the isolated effect of one variable on the outcome while all other effects are fixed at at a representative value. Interaction effects visualize the interaction between two predictors.
 
-Firstly, we investigate the effect of the relative duration to see whether the time taken to create a domain model has an effect on the response variable.
+Firstly, we investigate the effect of the relative duration to see whether the time taken to create a domain model has an effect on the response variable. Time-pressure negatively affects the number of wrong associations. The less time a subject took for a domain model, the higher the likelihood of connecting associations wrongly.
 
 ```{r marginal-duration}
 conditional_effects(m, effects="rel.duration")
 ```
 
-Time-pressure negatively affects the number of wrong associations. The less time a subject took for a domain model, the higher the likelihood of connecting associations wrongly.
+```{r marginal-duration-export, include=FALSE}
+conditional_effects(m, effects="rel.duration")$rel.duration %>% 
+  select(effect1__, lower__, estimate__, upper__) %>% 
+  rename(all_of(c(duration="effect1__", ci.lower="lower__", estimate="estimate__", ci.upper="upper__"))) %>% 
+  mutate(target="wrong.associations") %>% 
+  write_csv(file = "../../data/results/rel-duration-wrong-associations.csv")
+```
 
 Additionally, we investigate the marginal effect of one of the more significant context factors, the existence of prior training in modeling. The graph shows that there is a slight difference, but the overlapping confidence intervals undermine the significance of the effect.
 
 ```{r marginal-train}
-conditional_effects(m, effects="model.train")
+conditional_effects(m, effects="model.train")$model.train %>% 
+  ggplot(aes(y=model.train)) +
+    geom_point(aes(x=estimate__), size=2) +
+    geom_errorbar(aes(xmin=lower__, xmax=upper__), width=0.3) +
+    labs(x="Likelihood of introducing a wrong association", y="Prior training in modeling")
 ```
 
-Next, we investigate the interaction between domain knowledge and the treatment. The hypothesis is that domain knowledge (in this case: particularly domain knowledge about open science/source) mitigates the effect of the treatments.
+```{r marginal-train-save, include=FALSE}
+ggsave(filename=file.path(path_figures, "results/model-train-wrong-associations.pdf"), width=7, height=2.5)
+```
+
+Next, we investigate the interaction between domain knowledge and the treatment. The hypothesis is that domain knowledge (in this case: particularly domain knowledge about open science/source) mitigates the effect of the treatments. The interaction effect shows a negative trend for `RQ=2` and `RQ=3`, meaning that the higher the domain knowledge, the smaller the impact of an ambiguous pronoun on the number of wrong associations. However, for `RQ=3`, the relationship is rather a bell-curve, meaning that when passive voice and ambiguous pronouns co-occur, the effect on wrong associations is greates for a medium level of domain knowledge.
 
 ```{r interaction-treatment-domainknowledge}
-conditional_effects(m, effects="dom.os:RQ")
+conditional_effects(m, effects="dom.os:RQ")[[1]] %>% 
+  select(dom.os, RQ, estimate__, lower__, upper__) %>% 
+  ggplot(aes(x=as.integer(dom.os)+(as.integer(RQ)*0.1-0.25), color=RQ)) +
+    geom_point(aes(y=estimate__), size=2) +
+    geom_errorbar(aes(ymin=lower__, ymax=upper__), width=0.3) +
+    labs(
+      x="Domain Knowledge in Open Source", 
+      y="Likelihood of introducing a wrong association",
+      color="Requirements Quality Defect") +
+    scale_color_discrete(labels=c("No defect", "Passive Voice", "Ambiguous Pronoun", "Passive Voice & Ambiguous Pronoun"))
+    #scale_x_continuous(breaks=1:5, labels=c("a", "b", "c", "d", "e"))
 ```
 
-The interaction effect shows a negative trend for `RQ=2` and `RQ=3`, meaning that the higher the domain knowledge, the smaller the impact of an ambiguous pronoun on the number of wrong associations. However, for `RQ=3`, the relationship is rather a bell-curve, meaning that 
+```{r interaction-treatment-domainknowledge-save, include=FALSE}
+ggsave(filename=file.path(path_figures, "results/treatment-domainknowledge.pdf"), width=8, height=4)
+```
 
 Next, we visualize the interaction effect between the period variable (i.e., the time slot in which a specific requirements specification was processed) and the treatment to identify any potential carryover effects.
 
