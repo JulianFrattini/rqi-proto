@@ -20,6 +20,13 @@ This repository contains the following files:
     * rel-duration-superfluous-entities: estimate and confidence interval of the marginal effect of the relative duration on superfluous entities
     * rel-duration-wrong-associations: estimate and confidence interval of the marginal effect of the relative duration on wrong associations
   * rqi-data.csv: data sheet aggregated from the individual data files (demographics, objects, and results) via [data-loading](./src/util/data-loading.Rmd)
+* doc: folder containing all supplementary material for the planning and execution of the experiment
+  * instrument: folder containing the experiment instrument
+    * Study Document.pdf: instructions for the experimental task
+    * Survey.pdf: additional survey for demographic variables of study participants
+  * Causal Model.pdf: fundamental causal assumptions informing the design of the experiment
+  * Experiment Design.pdf: documentation of the experimental design
+  * Experimental Objects.pdf: the requirements specifications for the experimental task as well as the ground truth
 * figures: folder containing all figures of the manuscript (in `pdf` format) which are either generated via the scripts or from `graphml` files
   * dags: all directed, acyclic graphs
   * demographics: visualization of the distribution of demographic variables
