@@ -68,9 +68,9 @@ In order to run the `R` scripts in the src folder, ensure that you have [R](http
 5. Create a folder called *fits* within *src/bayesian/* such that `brms` has a location to place all Bayesian models.
 6. Open the `rqi-proto.Rproj` file with RStudio, which will setup the environment correctly.
 
-## Application
+## Usage
 
-To use this replication package, we recommend investigating the artifacts in this repository in the following order. For each script, you can choose between the *interactive* `Rmd` file that allows to inspect and manipulate each variable and the *static* `html` file, which is a pre-compiled version of each `Rmd` notebook located in the [html](./src/html) folder.
+To use this replication package, we recommend investigating the artifacts in this repository in the following order. For each script, you can choose between the *interactive* `Rmd` file that allows to inspect and manipulate each variable and the *static* `html` file, which is a pre-compiled version of each `Rmd` notebook located in the [html](./src/html) folder. When opting for the static `html` files, you do not need to fulfill the [system requirements](#system-requirements) listed above and instead just need a browser and a `PDF` viewer.
 
 1. **Assumptions**: To understand the general causal assumptions that informed the design of the study, consider the [causal assumptions](./doc/causal-model.pdf)
 2. **Design**: To review the design derived from this causal model, consider the [experiment design](./doc/experiment-design.pdf) and the [experimental objects](./doc/experimental-objects.pdf).
