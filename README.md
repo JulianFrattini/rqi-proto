@@ -22,6 +22,7 @@ This repository contains the following files:
   * rqi-data.csv: data sheet aggregated from the individual data files (demographics, objects, and results) via [data-loading](./src/util/data-loading.Rmd)
 * doc: folder containing all supplementary material for the planning and execution of the experiment
   * instrument: folder containing the experiment instrument
+    * evaluation-guideline.pdf: guidelines on how to evaluate the collected data
     * study-document.pdf: instructions for the experimental task
     * survey.pdf: additional survey for demographic variables of study participants
   * causal-model.pdf: fundamental causal assumptions informing the design of the experiment
@@ -75,9 +76,10 @@ To use this replication package, we recommend investigating the artifacts in thi
 1. **Assumptions**: To understand the general causal assumptions that informed the design of the study, consider the [causal assumptions](./doc/causal-model.pdf)
 2. **Design**: To review the design derived from this causal model, consider the [experiment design](./doc/experiment-design.pdf) and the [experimental objects](./doc/experimental-objects.pdf).
 3. **Instrumentation**: The implementation of the experiment design consists of the [experiment task](./doc/instrument/study-document.pdf) and the [survey](./doc/instrument/survey.pdf) of demographic variables.
-4. **Data**: To inspect the collected data, consider the data preparation notebook ([static](./src/html/data-loading.html)/[interactive](./src/util/data-loading.Rmd)) or the [raw data](./data/raw). Also, consider the calculation of the inter-rater agreement ([static](./src/html/interrater-agreement.html)/[interactive](./src/meta/interrater-agreement.Rmd)) to check the reliability of the data labeling.
-5. **Frequentist Analysis**: Check the frequentist data analysis ([static](./src/html/frequentist-analysis.html)/[interactive](./src/frequentist/frequentist-analysis.Rmd)) to review the application of null-hypothesis significance tests as proposed by Femmer et al. [2].
-6. **Bayesian Analysis**: Check the Bayesian data analyses (static files in [src/html](./src/html) named after the five response variables (e.g., [duration.html](./src/html/duration.html) or [wrong-associations.html](./src/html/wrong-associations.html)), interactive files in [src/bayesian](./src/bayesian)) to review the application of a Bayesian data analysis framework for statistical causal inference [3].
+4. **Data**: To inspect the collected data, consider the data preparation notebook ([static](./src/html/data-loading.html)/[interactive](./src/util/data-loading.Rmd)) or the [raw data](./data/raw). 
+5. **Data Evaluation**: To verify the evaluation of the raw data, consider the [evaluation guidelines](./doc/instrument/evaluation-guideline.pdf). Also, consider the calculation of the inter-rater agreement ([static](./src/html/interrater-agreement.html)/[interactive](./src/meta/interrater-agreement.Rmd)) to check the reliability of the data evaluation.
+6. **Frequentist Analysis**: Check the frequentist data analysis ([static](./src/html/frequentist-analysis.html)/[interactive](./src/frequentist/frequentist-analysis.Rmd)) to review the application of null-hypothesis significance tests as proposed by Femmer et al. [2].
+7. **Bayesian Analysis**: Check the Bayesian data analyses (static files in [src/html](./src/html) named after the five response variables (e.g., [duration.html](./src/html/duration.html) or [wrong-associations.html](./src/html/wrong-associations.html)), interactive files in [src/bayesian](./src/bayesian)) to review the application of a Bayesian data analysis framework for statistical causal inference [3].
 
 ## References
 
