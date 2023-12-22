@@ -68,11 +68,24 @@ In order to run the `R` scripts in the src folder, ensure that you have [R](http
 5. Create a folder called *fits* within *src/bayesian/* such that `brms` has a location to place all Bayesian models.
 6. Open the `rqi-proto.Rproj` file with RStudio, which will setup the environment correctly.
 
+## Application
+
+To use this replication package, we recommend investigating the artifacts in this repository in the following order. For each script, you can choose between the interactive `Rmd` file that allows to inspect and manipulate each variable and the `html` file, which is a pre-compiled version of each `Rmd` notebook located in the [html](./src/html) folder.
+
+1. **Assumptions**: To understand the general causal assumptions that informed the design of the study, consider the [causal assumptions](./doc/Causal Model.pdf)
+2. **Design**: To review the design derived from this causal model, consider the [experiment design](./doc/Experiment Design.pdf) and the [experimental objects](./doc/Experimental Objects.pdf).
+3. **Instrumentation**: The implementation of the experiment design consists of the [experiment task](./doc/instrument/Study Document.pdf) and the [survey](./doc/instrument/Survey.pdf) of demographic variables.
+4. **Data**: To inspect the collected data, consider the data preparation notebook ([static](./src/html/data-loading.html)/[interactive](./src/util/data-loading.Rmd)) or the [raw data](./data/raw). Also, consider the calculation of the inter-rater agreement ([static](./src/html/interrater-agreement.html)/[interactive](./src/meta/interrater-agreement.Rmd)) to check the reliability of the data labeling.
+5. **Frequentist Analysis**: Check the frequentist data analysis ([static](./src/html/frequentist-analysis.html)/[interactive](./src/frequentist/frequentist-analysis.Rmd)) to review the application of null-hypothesis significance tests as proposed by Femmer et al. [2].
+6. **Bayesian Analysis**: Check the Bayesian data analyses (static files in [src/html](./src/html) named after the five response variables (e.g., [duration.html](./src/html/duration.html) or [wrong-associations.html](./src/html/wrong-associations.html)), interactive files in [src/bayesian](./src/bayesian)) to review the application of a Bayesian data analysis framework for statistical causal inference [3].
+
 ## References
 
 [1] Frattini, J., Montgomery, L., Fischbach, J., Mendez, D., Fucci, D., & Unterkalmsteiner, M. (2023). Requirements quality research: a harmonized theory, evaluation, and roadmap. Requirements Engineering, 1-14.
 
 [2] Femmer, H., Kučera, J., & Vetrò, A. (2014, September). On the impact of passive voice requirements on domain modelling. In Proceedings of the 8th ACM/IEEE international symposium on empirical software engineering and measurement (pp. 1-4).
+
+[3] Siebert, J. (2023). Applications of statistical causal inference in software engineering. Information and Software Technology, 107198.
 
 ## License
 
