@@ -2,6 +2,7 @@
 
 [![GitHub](https://img.shields.io/github/license/JulianFrattini/rqi-proto)](./LICENSE)
 [![DOI](https://zenodo.org/badge/702902445.svg)](https://zenodo.org/doi/10.5281/zenodo.10423665)
+[![arXiv](https://img.shields.io/badge/arXiv-2401.01154-b31b1b.svg)](https://arxiv.org/abs/2401.01154)
 
 This repository contains the replication package for the prototype study that empirically investigates the impact of requirements quality defects on subsequent activities. It is the first implementation of the requirements quality theory [1] with the goal of quantifying the impact that alleged requirements quality defects (like passive voice or ambiguous pronouns) have on subsequent software engineering activities (like domain modeling).
 
