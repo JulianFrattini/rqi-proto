@@ -1,0 +1,251 @@
+---
+title: "Requirements Quality Impact on Combined Defects"
+author: "Julian Frattini"
+date: '2023-10-10'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+source("../util/setup.R")
+source("../util/model-eval.R")
+```
+
+This document contains the investigation of the impact of **requirements quality** on the number all defects combined.
+There is no empirical support for the independence of the defect types.
+This analysis is purely conducted out of curiosity.
+
+## Data Loading
+
+```{r data}
+source("../util/data-preprocessing.R")
+d <- load.data()
+```
+
+Calculate the number of total defects by adding the number of missing entities, superfluous entities, missing associations, and wrong associations up.
+
+```{r calculate-defects}
+d <- d %>% 
+  mutate(defects = entities.missing + entities.superfluous + associations.missing + associations.wrong)
+```
+
+
+## Bayesian Data Analysis 
+
+We perform a Bayesian data analysis to answer the question: which factors influence the number of defects in a domain model.
+
+### Graphical Causal Model
+
+We draw a Directed Acyclic Graph (DAG) to make our causal assumptions explicit.
+
+```{r dag}
+dag <- dagify(
+  d ~ rq + dur + edu + exp + dom + task + tool,
+  dom ~ exp,
+  exposure = "rq",
+  outcome = "d",
+  labels = c(d = "defects", dur = "duration",
+             rq = "requirements.quality",
+             edu = "education", exp="experience",
+             dom = "domain.knowledge", task = "task.experience",
+             tool = "tool.experience"),
+  coords = list(x=c(rq=1, d=2, dur=1.5, edu=1, exp=1, dom=1.2, task=1, tool=1),
+                y=c(rq=-1, d=-1.5, dur=0, edu=-2, exp=-3.5, dom=-4, task=-2.5, tool=-3))
+)
+
+ggdag_status(dag, 
+             use_labels = "label", 
+             text = FALSE) +
+  guides(fill = "none", color = "none") + 
+  theme_dag()
+```
+
+We do not assume a relationship between *requirements quality* and *duration* as we have already disproven this relationship in the [duration](./duration.Rmd) analysis.
+
+### Formula Definition and Prior Selection
+
+We derive our formula from our DAG to infer the strength of causal relationships from it.
+
+#### Model Definition
+
+Based on the DAG, we construct a model with the following parameters:
+
+| Term | Predictor | Rationale |
+|---|---|---|
+| `1` | Intercept | General challenge of missing an entity |
+| `(1|PID)` | Participant-specific variability | Participant-specific defiation from the intercept in generally missing an entity |
+| `RQ*period` | Carryover | Interaction effect between the treatment and the period, i.e., whether some treatments have a stronger effect in later periods |
+| (`RQ`) |  Main Factor | Influence of a requirements quality defect on connecting entities wrongly |
+| (`period`) | Sequence effect | Period in which the subject applies the treatment |
+| `duration.scaled` | Time | (Self-made) time pressure to complete the domain model |
+| *rest* | Confounders | Context factors influencing the causal relationships. |
+
+Predictors in brackets (e.g., (`RQ`)) are implied by the interaction effects (e.g., `RQ*dom.os`) and do not explicitly appear in the formula.
+
+```{r formula}
+formula <- defects ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  duration.scaled + 
+  exp.se.scaled + exp.re.scaled + edu + primary.role +
+  dom.os + dom.db + 
+  model.train + model.occ
+```
+
+The response variable is a count of superfluous entities, which does not have an upper bound. The number of superfluous entities is a candidate for a Poisson distribution. We check the eligibility of that distribution by calculating its dispersion.
+
+```{r dispersion}
+mean <- mean(d$defects)
+stdev <- sd(d$defects)
+index.of.dispersion <- (stdev^2)/mean
+```
+
+The index of dispersion is around 2.0, which suggests that the variable is overdispersed. 
+Because of this, a Poisson distribution is not eligible and we need to use a negative binomial distribution.
+
+For each predictor, we select an appropriate prior that reflects our prior belief about the causal relationship. We use weakly informative priors to allow the model in the later estimation step to infer the strength of the causal relations itself.
+
+```{r priors-nb}
+priors.nb <- c(
+    prior(normal(1, 1), class=Intercept),
+    prior(normal(0, 0.2), class=b),
+    prior(weibull(2, 1.5), class=sd),
+    prior(gamma(2, 2), class=shape)
+  )
+```
+
+```{r priors-zinb}
+priors.zinb <- c(
+    prior(normal(1, 1), class=Intercept),
+    prior(normal(0, 0.2), class=b),
+    prior(weibull(2, 1.5), class=sd),
+    prior(gamma(2, 2), class=shape),
+    prior(beta(2, 4), class=zi)
+  )
+```
+
+#### Prior Evaluation
+
+We sample directly from the priors (i.e., sample without the model updating its parameter distributions based on the observed data) to evaluate the feasibility of the priors.
+
+```{r model-priors-nb}
+m.prior.nb <-
+  brm(data = d, family = negbinomial, formula, prior = priors.nb,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, sample_prior="only"
+  )
+```
+
+```{r model-priors-zinb}
+m.prior.zinb <-
+  brm(data = d, family = zero_inflated_negbinomial, formula, prior = priors.zinb,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, sample_prior="only"
+  )
+```
+
+```{r prior-predictive-check}
+ndraws <- 100
+
+priorpc.nb <- brms::pp_check(m.prior.nb, ndraws=ndraws, type="bars")
+priorpc.zinb <- brms::pp_check(m.prior.zinb, ndraws=ndraws, type="bars")
+
+priorpc.nb / priorpc.zinb
+```
+
+### Model Training
+
+Now, we execute the estimation step by updating the prior distributions based on the observed data `d`.
+
+```{r model-nb}
+m.nb <-
+  brm(data = d, family = negbinomial, formula, prior = priors.nb,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, 
+    file = "fits/defects.nb"
+  )
+```
+
+```{r model-zinb}
+m.zinb <-
+  brm(data = d, family = zero_inflated_negbinomial, formula, prior = priors.zinb,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4, 
+    file = "fits/defects.zinb"
+  )
+```
+
+We perform a posterior predictive check to ensure that the model has learned properly.
+
+```{r posterior-predictive-check}
+postpc.nb <- brms::pp_check(m.nb, ndraws=ndraws, type="bars")
+postpc.zinb <- brms::pp_check(m.zinb, ndraws=ndraws, type="bars")
+
+postpc.nb / postpc.zinb
+```
+
+The distribution of draws still encompasses the actually observed data. Additionally, the distribution grew narrower around the observed data, indicating that the posterior distributions more accurately reflect the the observed data.
+
+### Model Comparison
+
+We compare the predictive capability of the two models using the leave-one-out comparison.
+
+```{r loo-compare}
+m.nb <- add_criterion(m.nb, criterion = "loo")
+m.zinb <- add_criterion(m.zinb, criterion = "loo")
+
+loo_compare(m.nb, m.zinb)
+```
+
+The zero-inflation does not add to the predictive power of the model.
+
+### Model selection
+
+```{r model-selection}
+m <- m.nb
+```
+
+We visualize the summary of updated posterior distributions - which does not yet answer the initial question, but indicates the direction and strength that each predictor has on the response variable.
+
+```{r model-summary}
+summary(m)
+```
+
+### Model Evaluation
+
+#### Posterior Predictions
+
+We let the model predict the response variable with a fixed independent variable (RQ=1 (passive voice), RQ=2 (ambiguous pronoun), and RQ=3 (passive voice + ambiguous pronoun)) and representative values for the context factors. This posterior prediction takes all uncertainty, which the model picked up, into account.
+
+```{r posterior-comparison-passive}
+evaluate.model(model=m, treatment=1)
+```
+
+```{r posterior-comparison-pronoun}
+evaluate.model(model=m, treatment=2)
+```
+
+```{r posterior-comparison-passive-pronoun}
+evaluate.model(model=m, treatment=3)
+```
+
+The posterior predictions show a slight effect of the use of ambiguous pronouns on the number of missing entities.
+
+These values can also be obtained via `brms::conditional_effects`: by selecting the treatment `RQ` as the effect, the `posterior_epred` method predicts the distribution of the expected value when fixing the treatment to one of the four 
+
+```{r posterior-comparison}
+conditional_effects(m, effects="RQ", method="posterior_epred")
+```
+
+#### Marginal and Interaction Effects
+
+We visualize the interaction effect between the period variable (i.e., the time slot in which a specific requirements specification was processed) and the treatment to identify any potential carryover effects.
+
+```{r interaction-treatment-period}
+conditional_effects(m, effects=c("period", "period:RQ"))
+```
+
+The visualizations show a slight learning effect, i.e., participants tend to commit less mistakes over time.
+However, the interaction between period and the requirements quality defect shows that this is the opposite when using ambiguous pronouns, i.e., participants tended to commit more mistakes from ambiguous pronouns the later they received the treatment `AP` or `PVAP`.
+This might hint at a specific exhaustion effect.
