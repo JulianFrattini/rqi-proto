@@ -201,7 +201,7 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
   effect.size.ci.lower = double(),
   effect.size.ci.upper = double()
 )</code></pre>
-<p>Next, we conduct the <span class="math inline">\(3 \times 5 = 15\)</span> hypotheses tests and store the results. We have paired data for analyzing both hypotheses, because every participant processed two requirements with different configurations of the independent variable for both configurations of the other independent variable. We determine, whether the data is normally distributed via the <em>Shapiro-Wilk test</em> and then select either the <em>paired student t-test</em> or the <em>Wilcoxon rank sum test</em> to evaluate the null-hypothesis.</p>
+<p>Next, we conduct the <span class="math inline">\(3 \times 5 = 15\)</span> hypotheses tests and store the results. We have paired data for analyzing both hypotheses, because every participant processed two requirements with different configurations of the independent variable for both configurations of the other independent variable. We determine, whether the data is normally distributed via the <em>Shapiro-Wilk test</em> and then select either the <em>paired student t-test</em> or the <em>Wilcoxon signed rank test</em> to evaluate the null-hypothesis.</p>
 <p>Additionally, we calculate the effect size with either <em>Cohen’s d</em> or the <em>matched-pairs rank biserial correlation coefficient</em> according to King, B. M., Rosopa, P. J., &amp; Minium, E. W. (2018). Statistical reasoning in the behavioral sciences. John Wiley &amp; Sons. (see rcompanion documentation<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>)</p>
 <pre class="r"><code>for (outcome in response.variables) {
   for (treatment in treatments) {
@@ -211,7 +211,7 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
     swtest.baseline &lt;- shapiro.test(d.paired$baseline)
     swtest.treatment &lt;- shapiro.test(d.paired$treatment)
 
-    # depending on the result of the Shapiro-Wilk test for normal distribution, either perform a Wilcoxon test or a t-test
+    # depending on the result of the Shapiro-Wilk test for normal distribution, either perform a Wilcoxon signed rank test or a t-test
     if(swtest.baseline$p.value &lt; alpha || swtest.treatment$p.value &lt; alpha) {
       hypothesis.test &lt;- wilcox.test(x=d.paired$baseline, y=d.paired$treatment, conf.int=TRUE, paired=TRUE)
       effect.size &lt;- wilcoxonPairedRC(x=d.long[[outcome]], g=d.long$treatment, ci=TRUE)
@@ -301,8 +301,8 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
 <td align="right">-0.7176470</td>
 <td align="right">0.8611728</td>
 <td align="right">0.0476000</td>
-<td align="right">-0.4630000</td>
-<td align="right">0.5630000</td>
+<td align="right">-0.4260000</td>
+<td align="right">0.5580000</td>
 </tr>
 <tr class="odd">
 <td align="left">duration.scaled</td>
@@ -326,7 +326,7 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
 <td align="right">-0.9999944</td>
 <td align="right">-0.7910000</td>
 <td align="right">-1.0000000</td>
-<td align="right">-0.4570000</td>
+<td align="right">-0.4170000</td>
 </tr>
 <tr class="odd">
 <td align="left">entities.missing</td>
@@ -338,7 +338,7 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
 <td align="right">-0.9999917</td>
 <td align="right">-0.9290000</td>
 <td align="right">-1.0000000</td>
-<td align="right">-0.7470000</td>
+<td align="right">-0.7430000</td>
 </tr>
 <tr class="even">
 <td align="left">entities.missing</td>
@@ -350,7 +350,7 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
 <td align="right">-0.9999910</td>
 <td align="right">-0.8140000</td>
 <td align="right">-1.0000000</td>
-<td align="right">-0.4940000</td>
+<td align="right">-0.5160000</td>
 </tr>
 <tr class="odd">
 <td align="left">entities.superfluous</td>
@@ -361,8 +361,8 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
 <td align="right">-0.5000014</td>
 <td align="right">1.0000000</td>
 <td align="right">0.1430000</td>
-<td align="right">-0.4360000</td>
-<td align="right">0.7140000</td>
+<td align="right">-0.4170000</td>
+<td align="right">0.7330000</td>
 </tr>
 <tr class="even">
 <td align="left">entities.superfluous</td>
@@ -373,8 +373,8 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
 <td align="right">-2.4999586</td>
 <td align="right">0.9999382</td>
 <td align="right">-0.4070000</td>
-<td align="right">-0.8290000</td>
-<td align="right">0.2630000</td>
+<td align="right">-0.8250000</td>
+<td align="right">0.2730000</td>
 </tr>
 <tr class="odd">
 <td align="left">entities.superfluous</td>
@@ -385,8 +385,8 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
 <td align="right">-0.9999573</td>
 <td align="right">1.0000150</td>
 <td align="right">0.1520000</td>
-<td align="right">-0.4420000</td>
-<td align="right">0.7500000</td>
+<td align="right">-0.3680000</td>
+<td align="right">0.7670000</td>
 </tr>
 <tr class="even">
 <td align="left">associations.missing</td>
@@ -398,7 +398,7 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
 <td align="right">-0.0000375</td>
 <td align="right">-0.5820000</td>
 <td align="right">-1.0000000</td>
-<td align="right">-0.0910000</td>
+<td align="right">-0.1000000</td>
 </tr>
 <tr class="odd">
 <td align="left">associations.missing</td>
@@ -410,7 +410,7 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
 <td align="right">-0.9999663</td>
 <td align="right">-0.7780000</td>
 <td align="right">-1.0000000</td>
-<td align="right">-0.2950000</td>
+<td align="right">-0.3000000</td>
 </tr>
 <tr class="even">
 <td align="left">associations.missing</td>
@@ -422,7 +422,7 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
 <td align="right">-0.9999244</td>
 <td align="right">-0.7100000</td>
 <td align="right">-1.0000000</td>
-<td align="right">-0.3030000</td>
+<td align="right">-0.3120000</td>
 </tr>
 <tr class="odd">
 <td align="left">associations.wrong</td>
@@ -446,7 +446,7 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
 <td align="right">-0.9999936</td>
 <td align="right">-0.8570000</td>
 <td align="right">-1.0000000</td>
-<td align="right">-0.5010000</td>
+<td align="right">-0.5000000</td>
 </tr>
 <tr class="odd">
 <td align="left">associations.wrong</td>
@@ -458,7 +458,7 @@ response.variables &lt;- c(&quot;duration.scaled&quot;, &quot;entities.missing&q
 <td align="right">0.0000329</td>
 <td align="right">-0.6730000</td>
 <td align="right">-1.0000000</td>
-<td align="right">-0.0909000</td>
+<td align="right">-0.1430000</td>
 </tr>
 </tbody>
 </table>

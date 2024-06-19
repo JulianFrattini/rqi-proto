@@ -57,7 +57,9 @@ fda <- data.frame(
 )
 ```
 
-Next, we conduct the $3 \times 5 = 15$ hypotheses tests and store the results. We have paired data for analyzing both hypotheses, because every participant processed two requirements with different configurations of the independent variable for both configurations of the other independent variable. We determine, whether the data is normally distributed via the *Shapiro-Wilk test* and then select either the *paired student t-test* or the *Wilcoxon rank sum test* to evaluate the null-hypothesis.
+Next, we conduct the $3 \times 5 = 15$ hypotheses tests and store the results. 
+We have paired data for analyzing both hypotheses, because every participant processed two requirements with different configurations of the independent variable for both configurations of the other independent variable. 
+We determine, whether the data is normally distributed via the *Shapiro-Wilk test* and then select either the *paired student t-test* or the *Wilcoxon signed rank test* to evaluate the null-hypothesis.
 
 Additionally, we calculate the effect size with either *Cohen's d* or the *matched-pairs rank biserial correlation coefficient* according to King, B. M., Rosopa, P. J., & Minium, E. W. (2018). Statistical reasoning in the behavioral sciences. John Wiley & Sons. (see rcompanion documentation^[https://rcompanion.org/handbook/F_06.html])
 
@@ -70,7 +72,7 @@ for (outcome in response.variables) {
     swtest.baseline <- shapiro.test(d.paired$baseline)
     swtest.treatment <- shapiro.test(d.paired$treatment)
 
-    # depending on the result of the Shapiro-Wilk test for normal distribution, either perform a Wilcoxon test or a t-test
+    # depending on the result of the Shapiro-Wilk test for normal distribution, either perform a Wilcoxon signed rank test or a t-test
     if(swtest.baseline$p.value < alpha || swtest.treatment$p.value < alpha) {
       hypothesis.test <- wilcox.test(x=d.paired$baseline, y=d.paired$treatment, conf.int=TRUE, paired=TRUE)
       effect.size <- wilcoxonPairedRC(x=d.long[[outcome]], g=d.long$treatment, ci=TRUE)
