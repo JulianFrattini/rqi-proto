@@ -55,6 +55,12 @@ ggdag_status(dag,
   theme_dag()
 ```
 
+We assume that all independent variables affect the `duration` and that, additionally, the `experience` may affect the `domain.knowledge`, as a population with higher experience values has a higher likelihood of having acquired respective domain knowledge.
+We currently do not assume other relationships.
+For example, `education` and `experience` are assumed to be independent as gaining more experience does not affect the formal education level, and on the other hand, a specific formal education does not imply actual experience in SE or RE.
+There may be a reason to assume that `experience` benefits `task.experience` but the authors did not see sufficient evidence to include this assumption in the DAG.
+We invite scholars to challenge our beliefs and update this causal model, however
+
 ### Formula Definition and Prior Selection
 
 We derive our formula from our DAG to infer the strength of causal relationships from it.
@@ -75,7 +81,7 @@ Based on the DAG, we construct a model with the following parameters:
 Predictors in brackets (e.g., (`RQ`)) are implied by the interaction effects (e.g., `RQ*period`) and do not explicitly appear in the formula.
 
 ```{r formula}
-formula <- rel.duration ~ 0 + 
+formula <- duration.scaled ~ 0 + 
                (1|PID)+ RQ*period +
                exp.se.scaled + exp.re.scaled + edu + primary.role + 
                dom.os + dom.db + 
@@ -184,13 +190,13 @@ The model using the skewed normal distribution outperforms the other model in te
 Additionally, we test for conditional independencies. According to our DAG, we assume that $exp.se \rightarrow duration$, $exp.se \rightarrow dom$, and $dom \rightarrow duration$. We test whether the first and/or last hypothesis are true by comparing the selected model with other candidates where one of the two factors is missing. 
 
 ```{r comparison-formula}
-f.no.exp <- rel.duration ~ 0 + 
+f.no.exp <- duration.scaled ~ 0 + 
                (1|PID)+ RQ*period +
                exp.re.scaled + edu + primary.role + 
                dom.os + dom.db + 
                model.train + model.occ 
 
-f.no.dom <- rel.duration ~ 0 + 
+f.no.dom <- duration.scaled ~ 0 + 
                (1|PID)+ RQ*period +
                exp.se.scaled + exp.re.scaled + edu + primary.role +
                model.train + model.occ 
