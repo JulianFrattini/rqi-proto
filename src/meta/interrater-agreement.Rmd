@@ -17,13 +17,13 @@ source("../util/data-preprocessing.R")
 library(lsa)
 ```
 
-In this document, we calculate the inter-rater agreement of the labeling task, where two independent raters annotated the issues they found in the submitted domain models. There are six types of isseus:
+In this document, we calculate the inter-rater agreement of the labeling task, where two independent raters annotated the issues they found in the submitted domain models. There are six types of issues:
 
 * Missing entity: An entity in the ground truth has no semantic equivalent in the submitted domain model.
 * Too-coarse entity: An entity in the submitted domain model represents two or more entities in the ground truth.
 * Superfluous entity: An entity in the submitted domain model has no semantical equivalent in the ground truth.
 * Missing association: An association in the ground truth has no semantic equivalent in the submitted domain model.
-* Miswired association: An association in the ground truth has a semantic equivalent in the submitted domain model, but either the target or the source of the association is incorrect.
+* Miswired (i.e., wrong) association: An association in the ground truth has a semantic equivalent in the submitted domain model, but either the target or the source of the association is incorrect.
 * Superfluous association: An association in the submitted domain model has no semantic equivalent in the ground truth.
 
 ```{r response-variables}
@@ -60,7 +60,10 @@ r1 <- r1 %>% filter(PID %in% overlap$PID)
 
 ## Inter-rater Agreement Calculation
 
-Our response variables are numeric, i.e., we only care about the *number* of issues identified in each requirement. Every requirement is hence characterized by an evaluation on six dimensions (one for each response variable). The appropriate measure of agreement is, hence, cosine similarity, which we calculate for each observation.
+Our response variables are numeric, i.e., we only care about the *number* of issues identified in each requirement. 
+Every requirement is hence characterized by an evaluation on six dimensions (one for each response variable). 
+One appropriate measure of agreement is, hence, cosine similarity, which we calculate for each observation.
+Finally, calculate the mean of the 12 cosine similarities to determine the average rating agreement.
 
 ```{r cosine-similarity}
 cosine.similarity <- c()
@@ -73,11 +76,26 @@ for (i in 1:nrow(r1)) {
   
   cosine.similarity <- c(cosine.similarity, sim)
 }
+
+mean(cosine.similarity)
 ```
 
-Finally, calculate the mean of the 12 cosine similarities to determine the average rating agreement.
+Another, easier to interpret measure of inter-rater agreement is to calculate the Spearman rank correlation between two vectors of values for the response variables by two raters.
+The Spearman rank correlation `cor.text(method='spearman')` will yield a value between 1 (perfect agreement) and -1 (perfect disagreement).
+This metric is much more common and easier to interpret.
 
-```{r mean-agreement}
-mean(cosine.similarity)
+```{r spearman-rank}
+spearman.correlation <- c()
+
+for (i in 1:nrow(r1)) {
+  vec1 <- r1[i,] %>% select(all_of(response.vars))
+  vec2 <- r2[i,] %>% select(all_of(response.vars))
+  
+  sim <- cor.test(x=as.numeric(as.vector(vec1)), y=as.numeric(as.vector(vec2)), method = 'spearman')
+  
+  spearman.correlation <- c(spearman.correlation, sim$estimate)
+}
+
+mean(spearman.correlation)
 ```
 
