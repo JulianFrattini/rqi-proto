@@ -296,7 +296,7 @@ participants %>%
     labs(x="Domains", y="Count", fill="Knowledge") +
     scale_x_discrete(labels=c("open source", "databases", "telemetry", "aeronautics")) +
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-    scale_fill_manual(values=hcl.colors(5, "Cividis"), labels=c("5 (expert)", "4", "3", "2", "1 (unknown)"))
+    scale_fill_manual(values=hcl.colors(5, "Green-Brown"), labels=c("5 (expert)", "4", "3", "2", "1 (unknown)"))
 
 ggsave(filename=file.path(path_figures, "rqi-dom.pdf"), width=6, height=2)
 ```
@@ -316,7 +316,7 @@ participants %>%
     coord_flip() +
     labs(x="", y="Count", fill="Usage") +
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-    scale_fill_manual(values=hcl.colors(5, "Cividis"))
+    scale_fill_manual(values=hcl.colors(5, "Green-Brown"))
 
 ggsave(filename=file.path(path_figures, "rqi-task.pdf"), width=5, height=2)
 ```
