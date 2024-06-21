@@ -14,6 +14,7 @@ This repository contains the following files:
 
 * data: folder containing all data obtained from the experiment
   * raw: folder containing the raw data as collected during the experiment
+    * responses: folder containing the raw submissions of experiment participants (i.e., their created domain models)
     * rqi-demographics.csv: anonymized demographic data about the experiment participants
     * rqi-objects.csv: attributes of the four experimental objects (single-sentence requirements specifications)
     * rqi-results.csv: evaluation of the domain models produced by the experiment participants
@@ -38,6 +39,7 @@ This repository contains the following files:
   * results: marginal and interaction plots evaluating the Bayesian models
 * src: R code processing the data
   * bayesian: Bayesian data analyses of the following hypotheses:
+    * combined-defects.Rmd: "Requirements quality has an effect on the number of total defects (missing entities, superfluous entities, missing associations, and wrong associations)"
     * duration.Rmd: "Requirements quality has an effect on the duration to create a domain model"
     * missing-associations.Rmd: "Requirements quality has an effect on the number of associations missing from a domain model"
     * missing-entities.Rmd: "Requirements quality has an effect on the number of entities missing from a domain model"
