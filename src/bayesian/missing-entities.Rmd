@@ -68,7 +68,7 @@ Based on the DAG, we construct a model with the following parameters:
 | `RQ*period` | Carryover | Interaction effect between the treatment and the period, i.e., whether some treatments have a stronger effect in later periods |
 | (`RQ`) |  Main Factor | Influence of a requirements quality defect on connecting entities wrongly |
 | (`period`) | Sequence effect | Period in which the subject applies the treatment |
-| `rel.duration` | Time | (Self-made) time pressure to complete the domain model |
+| `duration.scaled` | Time | (Self-made) time pressure to complete the domain model |
 | *rest* | Confounders | Context factors influencing the causal relationships. |
 
 Predictors in brackets (e.g., (`RQ`)) are implied by the interaction effects (e.g., `RQ*dom.os`) and do not explicitly appear in the formula.
@@ -77,7 +77,7 @@ Predictors in brackets (e.g., (`RQ`)) are implied by the interaction effects (e.
 formula <- entities.missing | trials(entities.expected) ~ 1 + 
   (1|PID) + 
   RQ*period +
-  rel.duration + 
+  duration.scaled + 
   exp.se.scaled + exp.re.scaled + edu + primary.role +
   dom.os + dom.db + 
   model.train + model.occ
@@ -147,7 +147,7 @@ We test for conditional independencies. According to our DAG, we assume that $ex
 f.no.exp <- entities.missing | trials(entities.expected) ~ 1 + 
   (1|PID) + 
   RQ*period +
-  rel.duration + 
+  duration.scaled + 
   exp.re.scaled + edu + primary.role +
   dom.os + dom.db + 
   model.train + model.occ
@@ -155,7 +155,7 @@ f.no.exp <- entities.missing | trials(entities.expected) ~ 1 +
 f.no.dom <- entities.missing | trials(entities.expected) ~ 1 + 
   (1|PID) + 
   RQ*period +
-  rel.duration + 
+  duration.scaled + 
   exp.se.scaled + exp.re.scaled + edu + primary.role +
   model.train + model.occ
 ```

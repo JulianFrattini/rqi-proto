@@ -71,7 +71,7 @@ Based on the DAG, we construct a model with the following parameters:
 | (`dom.os`) | Domain knowledge | Influence of the availability of domain knowledge |
 | `RQ*period` | Carryover | Interaction effect between the treatment and the period, i.e., whether some treatments have a stronger effect in later periods |
 | (`period`) | Sequence effect | Period in which the subject applies the treatment |
-| `rel.duration` | Time | (Self-made) time pressure to complete the domain model |
+| `duration.scaled` | Time | (Self-made) time pressure to complete the domain model |
 | *rest* | Confounders | Context factors influencing the causal relationships. |
 
 Predictors in brackets (e.g., (`RQ`)) are implied by the interaction effects (e.g., `RQ*dom.os`) and do not explicitly appear in the formula. The explicit interaction effect `RQ*dom.os` stems from the hypothesis that domain knowledge may compensate ambiguity in requirements specifications.
@@ -81,7 +81,7 @@ formula <- associations.wrong | trials(associations.found) ~ 1 +
   (1|PID) + 
   RQ*dom.os +
   RQ*period +
-  rel.duration + 
+  duration.scaled + 
   exp.se.scaled + exp.re.scaled + edu + primary.role + 
   model.train + model.occ
                     
@@ -193,14 +193,14 @@ f.no.exp <- associations.wrong | trials(associations.found) ~ 1 +
   (1|PID) + 
   RQ*dom.os +
   RQ*period +
-  rel.duration + 
+  duration.scaled + 
   exp.re.scaled + edu + primary.role + 
   model.train + model.occ
 
 f.no.dom <- associations.wrong | trials(associations.found) ~ 1 + 
   (1|PID) + 
   RQ*period +
-  rel.duration + 
+  duration.scaled + 
   exp.se.scaled + exp.re.scaled + edu + primary.role + 
   model.train + model.occ
 ```
@@ -296,11 +296,11 @@ Additionally, we look at some marginal and interaction effects. Marginal effects
 Firstly, we investigate the effect of the relative duration to see whether the time taken to create a domain model has an effect on the response variable. Time-pressure negatively affects the number of wrong associations. The less time a subject took for a domain model, the higher the likelihood of connecting associations wrongly.
 
 ```{r marginal-duration}
-conditional_effects(m, effects="rel.duration")
+conditional_effects(m, effects="duration.scaled")
 ```
 
 ```{r marginal-duration-export, include=FALSE}
-conditional_effects(m, effects="rel.duration")$rel.duration %>% 
+conditional_effects(m, effects="duration.scaled")$duration.scaled %>% 
   select(effect1__, lower__, estimate__, upper__) %>% 
   rename(all_of(c(duration="effect1__", ci.lower="lower__", estimate="estimate__", ci.upper="upper__"))) %>% 
   mutate(target="wrong.associations") %>% 

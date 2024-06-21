@@ -70,7 +70,7 @@ formula <- associations.missing | trials(associations.expected) ~ 1 +
   (1|PID) + 
   RQ*period +
   entities.missing +
-  rel.duration + 
+  duration.scaled + 
   exp.se.scaled + exp.re.scaled + edu + primary.role + 
   model.train + model.occ +
   dom.os + dom.db
@@ -148,7 +148,7 @@ f.no.exp <- associations.missing | trials(associations.expected) ~ 1 +
   (1|PID) + 
   RQ*period +
   entities.missing +
-  rel.duration + 
+  duration.scaled + 
   exp.re.scaled + edu + primary.role + 
   model.train + model.occ +
   dom.os + dom.db
@@ -157,7 +157,7 @@ f.no.dom <- associations.missing | trials(associations.expected) ~ 1 +
   (1|PID) + 
   RQ*period +
   entities.missing +
-  rel.duration + 
+  duration.scaled + 
   exp.se.scaled + exp.re.scaled + edu + primary.role + 
   model.train + model.occ
 ```
@@ -217,7 +217,7 @@ f.no.rq <- associations.missing | trials(associations.expected) ~ 1 +
   (1|PID) + 
   period +
   entities.missing +
-  rel.duration + 
+  duration.scaled + 
   exp.se.scaled + exp.re.scaled + edu + primary.role + 
   model.train + model.occ +
   dom.os + dom.db
@@ -225,7 +225,7 @@ f.no.rq <- associations.missing | trials(associations.expected) ~ 1 +
 f.no.me <- associations.missing | trials(associations.expected) ~ 1 + 
   (1|PID) + 
   RQ*period +
-  rel.duration + 
+  duration.scaled + 
   exp.se.scaled + exp.re.scaled + edu + primary.role + 
   model.train + model.occ +
   dom.os + dom.db
@@ -345,7 +345,7 @@ ggsave(filename=file.path(path_figures, "results/missing-entities-missing-associ
 The marginal effect of the relative duration shows no effect of duration on number of missing associations.
 
 ```{r marginal-duration}
-conditional_effects(m, effects="rel.duration")
+conditional_effects(m, effects="duration.scaled")
 ```
 
 Next, we visualize the interaction effect between the period variable (i.e., the time slot in which a specific requirements specification was processed) and the treatment to identify any potential carryover effects.
