@@ -49,6 +49,7 @@ This repository contains the following files:
   * html: folder containing a pre-compiled `html` version of each `Rmd` file (using `knitr`)
   * meta: meta-analyses assessing the validity of the research
     * interrater-agreement.Rmd: calculation of the inter-rater agreement of two evaluators between rqi-results.csv and rqi-results-overlap.csv
+    * participant-type.Rmd: investigation of the eligibility of subsuming a participant type predictor by more fine-grained predictors (e.g., experience and domain knowledge)
   * util: helper files for the data analysis
     * data-loading.Rmd: assembly of the rqi-data.csv sheet for analysis and initial visualization of distributions
     * data-preparation.R: helper method to load the rqi-data.csv sheet and ensure the correct column types

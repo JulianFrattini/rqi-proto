@@ -1,0 +1,149 @@
+---
+title: "Eligibility of Participant Type Variable"
+author: "Julian Frattini"
+date: '2024-06-21'
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+source("../util/setup.R")
+source("../util/data-preprocessing.R")
+library(xlsx)
+```
+
+This document compares the predictive power of the independent variables *participant type* with the more fine-grained *experience* and *domain knowledge* variables.
+Software engineering research often considers the type of a participant (either `student` or `practitioner`) a meaningful independent variable.
+However, it is reasonable to assume that this binary distinction is unnecessarily coarse and, conceptually, only a bad proxy for more meaningful variables^[Salman, I., Misirli, A. T., & Juristo, N. (2015, May). Are students representatives of professionals in software engineering experiments?. In 2015 IEEE/ACM 37th IEEE international conference on software engineering (Vol. 1, pp. 666-676). IEEE.].
+This investigation adds empirical evidence to our claim that the more fine-grained variables subsume the coarse participant type.
+
+## Data Loading
+
+```{r data}
+d.original <- load.data()
+```
+
+In addition to the already prepared data, load the participant type information and merge it to the main data.
+
+```{r data-participant-type}
+d.participant.type <- read.xlsx(file=file.path('../../data/raw', "rqi-participant-type.xlsx"), sheetName="type") %>% 
+  mutate(
+    PID = as.numeric(PID),
+    type = factor(type, levels=c('student', 'practitioner'), ordered=FALSE),
+    )
+
+d <- d.original %>% 
+  full_join(d.participant.type)
+```
+
+## Comparison
+
+To empirically investigate our claim that our fine-grained variables subsume the participant type, we will compare three models with the different sets of factors regarding their predictive power using the leave-one-out (LOO) comparison.
+
+### Formulae and Priors
+
+We define three models with different sets of predictors (in addition to the common predictors like the treatment `RQ` or the experimental `period`):
+
+1. `coarse`: only `participant.type`
+2. `fine`: only fine-grained variables (`exp.se.scaled`, `exp.re.scaled`, `edu`, `primary.role`, `dom.os`, `dom.db`, `model.train`, `model.occ`)
+3. `full`: both sets of predictors
+
+Note that the `full` model is likely to be subject to multi-collinearity as, conceptually, the two sets of predictors encode the same information in different variables.
+Technically, the `full` model includes the same semantic information twice.
+
+```{r formula-coarse}
+f.coarse <- entities.missing | trials(entities.expected) ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  duration.scaled + 
+  type
+```
+
+```{r formula-fine}
+f.fine <- entities.missing | trials(entities.expected) ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  duration.scaled + 
+  exp.se.scaled + exp.re.scaled + edu + primary.role +
+  dom.os + dom.db + 
+  model.train + model.occ
+```
+
+```{r formula-full}
+f.full <- entities.missing | trials(entities.expected) ~ 1 + 
+  (1|PID) + 
+  RQ*period +
+  duration.scaled + 
+  exp.se.scaled + exp.re.scaled + edu + primary.role +
+  dom.os + dom.db + 
+  model.train + model.occ +
+  type
+```
+
+We use uninformative priors which have already proven adequate in the `missing-entities.Rmd` investigation. 
+
+```{r priors}
+priors <- c(
+  prior(normal(-1, 0.2), class=Intercept),
+  prior(normal(0, 0.1), class=b),
+  prior(weibull(2, 1), class=sd)
+)
+```
+
+### Model Training
+
+Next, we train the three models with the given data and assumed priors.
+
+```{r model-coarse}
+m.coarse <-
+  brm(data = d, family = binomial, f.coarse, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4
+  )
+```
+
+```{r model-fine}
+m.fine <-
+  brm(data = d, family = binomial, f.fine, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4
+  )
+```
+
+```{r model-full}
+m.full <-
+  brm(data = d, family = binomial, f.full, prior = priors,
+    iter = 4000, warmup = 1000, chains = 4, cores = 4,
+    seed = 4
+  )
+```
+
+To ensure that all models were trained correctly, we inspect posterior predictive checks.
+
+```{r posterior-predictive-check}
+ndraws <- 100
+
+prior.pred.coarse <- brms::pp_check(m.coarse, type="bars", ndraws=ndraws)
+prior.pred.fine <- brms::pp_check(m.fine, type="bars", ndraws=ndraws)
+prior.pred.full <- brms::pp_check(m.full, type="bars", ndraws=ndraws)
+
+prior.pred.coarse | prior.pred.fine | prior.pred.full
+```
+
+The posterior predictive checks confirm that the models have been trained appropriately.
+
+### Comparison regarding predictive Power
+
+We compare the predictive capability of the three models using the leave-one-out comparison.
+
+```{r loo-compare}
+m.coarse <- add_criterion(m.coarse, criterion = "loo")
+m.fine <- add_criterion(m.fine, criterion = "loo")
+m.full <- add_criterion(m.full, criterion = "loo")
+
+loo_compare(m.coarse, m.fine, m.full)
+```
+
+The evaluation shows that all models perform fairly equal, though the `fine` model performs best.
+The `full` model should be viewed with caution given the risk of multi-collinearity.
+Overall, the results slightly favor the `fine` over the `coarse` approach.
