@@ -12,49 +12,52 @@ The study comprises of an experiment in which participants were tasked to genera
 
 This repository contains the following files:
 
-* data: folder containing all data obtained from the experiment
-  * raw: folder containing the raw data as collected during the experiment
-    * responses: folder containing the raw submissions of experiment participants (i.e., their created domain models)
-    * rqi-demographics.csv: anonymized demographic data about the experiment participants
-    * rqi-objects.csv: attributes of the four experimental objects (single-sentence requirements specifications)
-    * rqi-results.csv: evaluation of the domain models produced by the experiment participants
-    * rqi-results-overlap.csv: evaluation of a part of the domain models produced by the experiment participants, but by a different evaluator
-  * results: folder containing data produced during the evaluation
-    * rel-duration-superfluous-entities: estimate and confidence interval of the marginal effect of the relative duration on superfluous entities
-    * rel-duration-wrong-associations: estimate and confidence interval of the marginal effect of the relative duration on wrong associations
-  * rqi-data.csv: data sheet aggregated from the individual data files (demographics, objects, and results) via [data-loading](./src/util/data-loading.Rmd)
-* doc: folder containing all supplementary material for the planning and execution of the experiment
-  * instrument: folder containing the experiment instrument
-    * evaluation-guideline.pdf: guidelines on how to evaluate the collected data
-    * study-document.pdf: instructions for the experimental task
-    * survey.pdf: additional survey for demographic variables of study participants
-  * causal-model.pdf: fundamental causal assumptions informing the design of the experiment
-  * experiment-design.pdf: documentation of the experimental design
-  * experimental-objects.pdf: the requirements specifications for the experimental task as well as the ground truth
-* figures: folder containing all figures of the manuscript (in `pdf` format) which are either generated via the scripts or from `graphml` files
-  * dags: all directed, acyclic graphs
-  * demographics: visualization of the distribution of demographic variables
-  * examples: visualizations of domain models generated from requirements specifications
-  * quality-theory: graphical representation of the requirements quality theory
-  * results: marginal and interaction plots evaluating the Bayesian models
-* src: R code processing the data
-  * bayesian: Bayesian data analyses of the following hypotheses:
-    * combined-defects.Rmd: "Requirements quality has an effect on the number of total defects (missing entities, superfluous entities, missing associations, and wrong associations)"
-    * duration.Rmd: "Requirements quality has an effect on the duration to create a domain model"
-    * missing-associations.Rmd: "Requirements quality has an effect on the number of associations missing from a domain model"
-    * missing-entities.Rmd: "Requirements quality has an effect on the number of entities missing from a domain model"
-    * superfluous-entities.Rmd: "Requirements quality has an effect on the number of superfluous entities in a domain model"
-    * wrong-associations.Rmd: "Requirements quality has an effect on the number of wrong associations in a domain model"
-  * frequentist: Frequentist analysis of the data (investigating the hypotheses by Femmer et al. [2])
-  * html: folder containing a pre-compiled `html` version of each `Rmd` file (using `knitr`)
-  * meta: meta-analyses assessing the validity of the research
-    * interrater-agreement.Rmd: calculation of the inter-rater agreement of two evaluators between rqi-results.csv and rqi-results-overlap.csv
-    * participant-type.Rmd: investigation of the eligibility of subsuming a participant type predictor by more fine-grained predictors (e.g., experience and domain knowledge)
-  * util: helper files for the data analysis
-    * data-loading.Rmd: assembly of the rqi-data.csv sheet for analysis and initial visualization of distributions
-    * data-preparation.R: helper method to load the rqi-data.csv sheet and ensure the correct column types
-    * model-eval.R: helper method to run posterior predictions from a `brms` model
-    * setup.R: collection of library calls for all analysis scripts
+```
+├── data: folder containing all data obtained from the experiment
+│   ├── raw: folder containing the raw data as collected during the experiment
+│   │   ├── responses: folder containing the raw submissions of experiment participants (i.e., their created domain models)
+│   │   ├── rqi-demographics.csv: anonymized demographic data about the experiment participants
+│   │   ├── rqi-objects.csv: attributes of the four experimental objects (single-sentence requirements specifications)
+│   │   ├── rqi-results.csv: evaluation of the domain models produced by the experiment participants
+│   │   └── rqi-results-overlap.csv: evaluation of a part of the domain models produced by the experiment participants, but by a different evaluator
+│   ├── results: folder containing data produced during the evaluation
+│   │   ├── rel-duration-superfluous-entities: estimate and confidence interval of the marginal effect of the relative duration on superfluous entities
+│   │   └── rel-duration-wrong-associations: estimate and confidence interval of the marginal effect of the relative duration on wrong associations
+│   └── rqi-data.csv: data sheet aggregated from the individual data files (demographics, objects, and results) via data-loading
+├── doc: folder containing all supplementary material for the planning and execution of the experiment
+│   ├── instrument: folder containing the experiment instrument
+│   │   ├── evaluation-guideline.pdf: guidelines on how to evaluate the collected data
+│   │   ├── study-document.pdf: instructions for the experimental task
+│   │   └── survey.pdf: additional survey for demographic variables of study participants
+│   ├── causal-model.pdf: fundamental causal assumptions informing the design of the experiment
+│   ├── experiment-design.pdf: documentation of the experimental design
+│   └── experimental-objects.pdf: the requirements specifications for the experimental task as well as the ground truth
+├── figures: folder containing all figures of the manuscript (in `pdf` format) which are either generated via the scripts or from `graphml` files
+│   ├── dags: all directed, acyclic graphs
+│   ├── demographics: visualization of the distribution of demographic variables
+│   ├── examples: visualizations of domain models generated from requirements specifications
+│   ├── quality-theory: graphical representation of the requirements quality theory
+│   └── results: marginal and interaction plots evaluating the Bayesian models
+├── src: R code processing the data
+│   ├── bayesian: Bayesian data analyses of the following hypotheses:
+│   │   ├── combined-defects.Rmd: "Requirements quality has an effect on the number of total defects (missing entities, superfluous entities, missing associations, and wrong associations)"
+│   │   ├── duration.Rmd: "Requirements quality has an effect on the duration to create a domain model"
+│   │   ├── missing-associations.Rmd: "Requirements quality has an effect on the number of associations missing from a domain model"
+│   │   ├── missing-entities.Rmd: "Requirements quality has an effect on the number of entities missing from a domain model"
+│   │   ├── superfluous-entities.Rmd: "Requirements quality has an effect on the number of superfluous entities in a domain model"
+│   │   └── wrong-associations.Rmd: "Requirements quality has an effect on the number of wrong associations in a domain model"
+│   ├── frequentist: Frequentist analysis of the data (investigating the hypotheses by Femmer et al. [2])
+│   ├── html: folder containing a pre-compiled `html` version of each `Rmd` file (using `knitr`)
+│   ├── meta: meta-analyses assessing the validity of the research
+│   │   ├── interrater-agreement.Rmd: calculation of the inter-rater agreement of two evaluators between rqi-results.csv and rqi-results-overlap.csv
+│   │   └── participant-type.Rmd: investigation of the eligibility of subsuming a participant type predictor by more fine-grained predictors (e.g., experience and domain knowledge)
+│   └── util: helper files for the data analysis
+│       ├── data-loading.Rmd: assembly of the rqi-data.csv sheet for analysis and initial visualization of distributions
+│       ├── data-preparation.R: helper method to load the rqi-data.csv sheet and ensure the correct column types
+│       ├── model-eval.R: helper method to run posterior predictions from a `brms` model
+│       └── setup.R: collection of library calls for all analysis scripts
+└── rqi-proto.Rproj : R project setup file
+```
     
 ## System Requirements
 
