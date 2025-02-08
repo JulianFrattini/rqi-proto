@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Frattini"
+    given-names: "Julian"
+    orcid: "https://orcid.org/0000-0003-3995-6125"
+    affiliation: "Blekinge Institute of Technology"
+  - family-names: "Fucci"
+    given-names: "Davide"
+    orcid: "https://orcid.org/0000-0002-0679-4361"
+    affiliation: "Blekinge Institute of Technology"
+  - family-names: "Torkar"
+    given-names: "Richard"
+    orcid: "https://orcid.org/0000-0002-0118-8143"
+    affiliation: "Chalmers University of Technology"
+title: "Replication package for the paper: Applying Bayesian Data Analysis for Causal Inference about Requirements Quality: A Controlled Experiment"
+version: 1.1
+doi: 10.5281/zenodo.12205290
+date-released: 2024-06-21
+url: "https://github.com/JulianFrattini/rqi-proto"
