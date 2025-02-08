@@ -37,7 +37,7 @@ preferred-citation:
       given-names: "Daniel"
   doi: "10.1007/s10664-024-10582-1"
   journal: "Empirical Software Engineering"
-  month: November
+  month: 11
   title: "Applying Bayesian Data Analysis for Causal Inference about Requirements Quality: A Controlled Experiment"
   issue: 29
   volume: 30 
