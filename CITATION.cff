@@ -18,3 +18,27 @@ version: 1.1
 doi: 10.5281/zenodo.12205290
 date-released: 2024-06-21
 url: "https://github.com/JulianFrattini/rqi-proto"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Frattini"
+      given-names: "Julian"
+    - family-names: "Fucci"
+      given-names: "Davide"
+    - family-names: "Torkar"
+      given-names: "Richard"
+    - family-names: "Montgomery"
+      given-names: "Lloyd"
+    - family-names: "Unterkalmsteiner"
+      given-names: "Michael"
+    - family-names: "Fischbach"
+      given-names: "Jannik"
+    - family-names: "Mendez"
+      given-names: "Daniel"
+  doi: "10.1007/s10664-024-10582-1"
+  journal: "Empirical Software Engineering"
+  month: November
+  title: "Applying Bayesian Data Analysis for Causal Inference about Requirements Quality: A Controlled Experiment"
+  issue: 29
+  volume: 30 
+  year: 2024
