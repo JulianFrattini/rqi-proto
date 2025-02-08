@@ -4,9 +4,9 @@
 [![DOI](https://zenodo.org/badge/702902445.svg)](https://zenodo.org/doi/10.5281/zenodo.10423665)
 [![arXiv](https://img.shields.io/badge/arXiv-2401.01154-b31b1b.svg)](https://arxiv.org/abs/2401.01154)
 
-This repository contains the replication package for the prototype study that empirically investigates the impact of requirements quality defects on subsequent activities. It is the first implementation of the requirements quality theory [1] with the goal of quantifying the impact that alleged requirements quality defects (like passive voice or ambiguous pronouns) have on subsequent software engineering activities (like domain modeling).
+This repository contains the replication package for the prototype study that empirically investigates the impact of requirements quality defects on subsequent activities. It is the first implementation of the requirements quality theory[^1] with the goal of quantifying the impact that alleged requirements quality defects (like passive voice or ambiguous pronouns) have on subsequent software engineering activities (like domain modeling).
 
-The study comprises of an experiment in which participants were tasked to generate one domain model for each of four single sentence natural language requirements specifications. Each specification contained different requirements quality defects (passive voice and ambiguous pronouns). The experiment is used to evaluate whether these alleged quality defects have an impact on the properties of the resulting domain model. The experiment is an external, differentiated replication of a study by Femmer et al. [2].
+The study comprises of an experiment in which participants were tasked to generate one domain model for each of four single sentence natural language requirements specifications. Each specification contained different requirements quality defects (passive voice and ambiguous pronouns). The experiment is used to evaluate whether these alleged quality defects have an impact on the properties of the resulting domain model. The experiment is an external, differentiated replication of a study by Femmer et al.[^2]
 
 ## Structure
 
@@ -87,17 +87,13 @@ To use this replication package, we recommend investigating the artifacts in thi
 3. **Instrumentation**: The implementation of the experiment design consists of the [experiment task](./doc/instrument/study-document.pdf) and the [survey](./doc/instrument/survey.pdf) of demographic variables.
 4. **Data**: To inspect the collected data, consider the data preparation notebook ([static](./src/html/data-loading.html)/[interactive](./src/util/data-loading.Rmd)) or the [raw data](./data/raw). 
 5. **Data Evaluation**: To verify the evaluation of the raw data, consider the [evaluation guidelines](./doc/instrument/evaluation-guideline.pdf). Also, consider the calculation of the inter-rater agreement ([static](./src/html/interrater-agreement.html)/[interactive](./src/meta/interrater-agreement.Rmd)) to check the reliability of the data evaluation.
-6. **Frequentist Analysis**: Check the frequentist data analysis ([static](./src/html/frequentist-analysis.html)/[interactive](./src/frequentist/frequentist-analysis.Rmd)) to review the application of null-hypothesis significance tests as proposed by Femmer et al. [2].
-7. **Bayesian Analysis**: Check the Bayesian data analyses (static files in [src/html](./src/html) named after the five response variables (e.g., [duration.html](./src/html/duration.html) or [wrong-associations.html](./src/html/wrong-associations.html)), interactive files in [src/bayesian](./src/bayesian)) to review the application of a Bayesian data analysis framework for statistical causal inference [3].
-
-## References
-
-[1] Frattini, J., Montgomery, L., Fischbach, J., Mendez, D., Fucci, D., & Unterkalmsteiner, M. (2023). Requirements quality research: a harmonized theory, evaluation, and roadmap. Requirements Engineering, 1-14.
-
-[2] Femmer, H., Kučera, J., & Vetrò, A. (2014, September). On the impact of passive voice requirements on domain modelling. In Proceedings of the 8th ACM/IEEE international symposium on empirical software engineering and measurement (pp. 1-4).
-
-[3] Siebert, J. (2023). Applications of statistical causal inference in software engineering. Information and Software Technology, 107198.
+6. **Frequentist Analysis**: Check the frequentist data analysis ([static](./src/html/frequentist-analysis.html)/[interactive](./src/frequentist/frequentist-analysis.Rmd)) to review the application of null-hypothesis significance tests as proposed by Femmer et al.[^2]
+7. **Bayesian Analysis**: Check the Bayesian data analyses (static files in [src/html](./src/html) named after the five response variables (e.g., [duration.html](./src/html/duration.html) or [wrong-associations.html](./src/html/wrong-associations.html)), interactive files in [src/bayesian](./src/bayesian)) to review the application of a Bayesian data analysis framework for statistical causal inference.[^3]
 
 ## License
 
 Copyright © 2023 Julian Frattini. This work (source code) is licensed under [MIT License](./LICENSE).
+
+[^1]: Frattini, J., Montgomery, L., Fischbach, J., Mendez, D., Fucci, D., & Unterkalmsteiner, M. (2023). Requirements quality research: a harmonized theory, evaluation, and roadmap. Requirements Engineering, 1-14.
+[^2]: Femmer, H., Kučera, J., & Vetrò, A. (2014, September). On the impact of passive voice requirements on domain modelling. In Proceedings of the 8th ACM/IEEE international symposium on empirical software engineering and measurement (pp. 1-4).
+[^3]: Siebert, J. (2023). Applications of statistical causal inference in software engineering. Information and Software Technology, 107198.
